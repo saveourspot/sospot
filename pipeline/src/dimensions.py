@@ -1,0 +1,1 @@
+# dim_dong, dim_category 생성

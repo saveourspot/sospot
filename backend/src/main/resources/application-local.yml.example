@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sospot
+    username: sospot
+    password:
+    driver-class-name: org.postgresql.Driver
+
+llm:
+  api-key:
+  base-url: https://api.anthropic.com

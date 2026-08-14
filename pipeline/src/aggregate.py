@@ -1,0 +1,1 @@
+# fact_store_count (대분류/중분류 2단)
