@@ -9,8 +9,11 @@
 
 ## 원본 다운로드
 
-전국 행정동 경계 GeoJSON (행정안전부):
-- 출처: [주민등록 인구 및 세대현황 / 행정동 경계](https://www.mois.go.kr/) 또는 GitHub 공개 저장소
+전국 행정동 경계 GeoJSON:
+- 배포 출처: [`vuski/admdongkor`](https://github.com/vuski/admdongkor/tree/master/ver20260701)
+- 경계 기반: 통계청 SGIS 행정동 경계
+- 코드 체계: `adm_cd2`는 행정안전부 10자리 행정기관코드
+- 원본 파일: [`HangJeongDong_ver20260701.geojson`](https://github.com/vuski/admdongkor/blob/master/ver20260701/HangJeongDong_ver20260701.geojson)
 - 파일명: `HangJeongDong_ver20260701.geojson`
 - 크기: 약 34MB
 - 좌표계: CRS84 (WGS84)

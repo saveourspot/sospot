@@ -1,5 +1,5 @@
 ### 이상징후 지역 조회
-GET http://localhost:8080/api/anomalies?period=202606&catLevel=major&topN=10
+GET http://localhost:8080/api/anomaly/regions?catLevel=MAJOR&topN=10
 
 ### 행정동 상세
-GET http://localhost:8080/api/regions/30230560?period=202606
+GET http://localhost:8080/api/regions/30230560
