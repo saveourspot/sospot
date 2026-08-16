@@ -384,6 +384,10 @@ $RECYCLE.BIN/
 
 data/raw/*
 !data/raw/.gitkeep
+
+# 원본 GeoJSON은 크기가 크므로 커밋 제외. 각자 로컬 다운로드.
+# 정규화된 daejeon_dong.geojson (P1-05 산출물)은 커밋한다.
+data/geo/HangJeongDong_*.geojson
 backend/build/
 frontend/node_modules/
 frontend/dist/
@@ -394,3 +398,5 @@ pipeline/__pycache__/
 .idea/httpRequests/
 
 backend/src/main/resources/application-local.yml
+
+backend/.gradle/
