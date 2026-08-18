@@ -4,6 +4,7 @@ import AnomalyCategoryCard from '../components/AnomalyCategoryCard.jsx'
 import Empty from '../components/Empty.jsx'
 import ErrorState from '../components/ErrorState.jsx'
 import Loading from '../components/Loading.jsx'
+import RelativeGapChart from '../components/RelativeGapChart.jsx'
 import RegionHeader from '../components/RegionHeader.jsx'
 import TrendChart from '../components/TrendChart.jsx'
 
@@ -146,6 +147,21 @@ function RegionDetailPage() {
           BSI는 이상징후 Score와 등급 계산에 사용되지 않으며, 지역×업종 교차
           BSI를 의미하지 않습니다.
         </p>
+      </section>
+
+      <section className="relative-gap-section" aria-labelledby="relative-gap-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">대전 전체 대비</p>
+            <h2 id="relative-gap-heading">업종별 상대격차</h2>
+          </div>
+          <p className="period-label">대분류 10개 · API 연동 예정</p>
+        </div>
+        <p className="section-description">
+          음수는 해당 지역의 점포 수 변화가 대전 전체 동일 업종보다 상대적으로
+          낮았음을 의미합니다.
+        </p>
+        <RelativeGapChart categories={[]} />
       </section>
 
       <section className="excluded-categories" aria-labelledby="excluded-heading">

@@ -1217,8 +1217,63 @@ a {
   line-height: 1.55;
 }
 
-.excluded-categories {
+.excluded-categories,
+.relative-gap-section {
   padding-top: 20px;
+}
+
+.relative-gap-chart {
+  width: 100%;
+  height: 500px;
+  padding: 20px 18px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: 0 10px 28px rgb(28 57 45 / 6%);
+}
+
+.relative-gap-chart-pending {
+  display: grid;
+  min-height: 360px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  color: #68766f;
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.relative-gap-chart-pending > strong {
+  color: #405148;
+}
+
+.relative-gap-chart-pending > p {
+  max-width: 480px;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.relative-gap-chart-pending__bars {
+  display: grid;
+  width: min(100%, 520px);
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.relative-gap-chart-pending__bars span {
+  height: 10px;
+  border-radius: 0 5px 5px 0;
+  background: #e3e8e5;
+}
+
+.relative-gap-chart-pending__bars span:nth-child(odd) {
+  justify-self: end;
+  border-radius: 5px 0 0 5px;
+  background: #f0d8d2;
 }
 
 .excluded-categories__pending {
@@ -1659,9 +1714,15 @@ a {
   }
 
   .trend-chart,
-  .trend-chart-pending {
+  .trend-chart-pending,
+  .relative-gap-chart-pending {
     min-height: 320px;
     height: 320px;
+  }
+
+  .relative-gap-chart {
+    height: 460px;
+    padding-inline: 6px;
   }
 
   .page-container {
