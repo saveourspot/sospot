@@ -851,6 +851,114 @@ a {
   text-align: right;
 }
 
+.region-detail-page {
+  display: grid;
+  gap: 22px;
+}
+
+.region-header {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  box-shadow: 0 14px 36px rgb(28 57 45 / 7%);
+}
+
+.region-header__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px;
+}
+
+.region-header__title-row h1 {
+  margin-bottom: 8px;
+}
+
+.region-header__period {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.region-header__title-row .grade-badge,
+.pending-badge {
+  flex: none;
+  margin-top: 4px;
+}
+
+.pending-badge {
+  border: 1px solid #dec77f;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #70560d;
+  background: #fff3c9;
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.region-header__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid #e3e9e5;
+  background: #f4f7f5;
+}
+
+.region-header__metrics > div {
+  padding: 20px 24px;
+}
+
+.region-header__metrics > div + div {
+  border-left: 1px solid #dce4df;
+}
+
+.region-header__metrics dt {
+  color: #708078;
+  font-size: 0.72rem;
+}
+
+.region-header__metrics dd {
+  margin: 7px 0 0;
+  color: #2c3c34;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.reason-summary {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.65fr) minmax(320px, 1.35fr);
+  align-items: center;
+  gap: 14px 40px;
+  padding: 28px 32px;
+  border: 1px solid #cfe0d8;
+  border-radius: 18px;
+  background: #edf5f1;
+}
+
+.reason-summary h2,
+.reason-summary p {
+  margin: 0;
+}
+
+.reason-summary h2 {
+  color: #23352c;
+  font-size: 1.35rem;
+  letter-spacing: -0.025em;
+}
+
+.reason-summary > p {
+  color: #43554c;
+  line-height: 1.7;
+}
+
+.reason-summary > span {
+  grid-column: 2;
+  color: #69786f;
+  font-size: 0.72rem;
+}
+
 .site-header {
   position: sticky;
   z-index: 100;
@@ -1163,6 +1271,29 @@ a {
 
   .map-legend p {
     display: none;
+  }
+
+  .region-header__title-row {
+    flex-direction: column;
+    padding: 24px 20px;
+  }
+
+  .region-header__metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .region-header__metrics > div + div {
+    border-top: 1px solid #dce4df;
+    border-left: 0;
+  }
+
+  .reason-summary {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+  }
+
+  .reason-summary > span {
+    grid-column: auto;
   }
 }
 
