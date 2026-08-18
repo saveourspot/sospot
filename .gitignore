@@ -395,7 +395,12 @@ pipeline/.venv/
 pipeline/__pycache__/
 *.iml
 .idea/workspace.xml
+.idea/encodings.xml
 .idea/httpRequests/
+
+# Python's generic lib/ rule also matches this frontend source directory.
+!frontend/src/lib/
+!frontend/src/lib/**
 
 backend/src/main/resources/application-local.yml
 
