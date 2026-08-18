@@ -598,6 +598,123 @@ a {
   box-shadow: 0 14px 34px rgb(28 57 45 / 8%);
 }
 
+.map-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+}
+
+.region-list-panel {
+  overflow: hidden;
+  height: 620px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: 0 14px 34px rgb(28 57 45 / 8%);
+}
+
+.region-list-panel__heading {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e3e9e5;
+}
+
+.region-list-panel__heading h2,
+.region-list-panel__heading p {
+  margin: 0;
+}
+
+.region-list-panel__heading h2 {
+  color: #24312b;
+  font-size: 1rem;
+}
+
+.region-list-panel__heading p {
+  margin-top: 3px;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.region-list-panel__heading > span {
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: #6e580e;
+  background: #fff2c3;
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.region-list-panel__empty {
+  margin: 0;
+  padding: 28px 16px;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.region-list {
+  overflow-y: auto;
+  height: calc(100% - 72px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  scrollbar-color: #bdcbc4 transparent;
+  scrollbar-width: thin;
+}
+
+.region-list li + li {
+  border-top: 1px solid #edf0ee;
+}
+
+.region-list li {
+  border-left: 4px solid transparent;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.region-list li.is-highlighted {
+  border-left-color: var(--color-primary);
+  background: #e8f3ee;
+}
+
+.region-list a {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 9px 12px;
+  text-decoration: none;
+}
+
+.region-list a:focus-visible {
+  outline: 3px solid #87b7a6;
+  outline-offset: -3px;
+}
+
+.region-list__name {
+  overflow: hidden;
+  color: #2b3a33;
+  font-size: 0.84rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.region-list__sigungu {
+  grid-column: 1;
+  color: #77837d;
+  font-size: 0.68rem;
+}
+
+.region-list .grade-badge {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
 .map-panel .state-panel {
   min-height: 620px;
   border: 0;
@@ -978,6 +1095,14 @@ a {
   .daejeon-map {
     min-height: 520px;
     height: 520px;
+  }
+
+  .map-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .region-list-panel {
+    height: 420px;
   }
 
   .map-legend {

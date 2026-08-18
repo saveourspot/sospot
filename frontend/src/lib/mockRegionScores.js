@@ -9,6 +9,8 @@ export function createPreviewRegionScores(features, categoryCode = '') {
 
   return features.map((feature, index) => ({
     dongCode: feature.properties.dong_code,
+    dongName: feature.properties.dong_name,
+    sigungu: feature.properties.sggnm,
     grade: GRADE_ORDER[(index + categoryOffset) % GRADE_ORDER.length],
     sampleSizeFlag: 'OK',
   }))

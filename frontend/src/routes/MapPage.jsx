@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import CategoryFilter from '../components/CategoryFilter.jsx'
 import ErrorState from '../components/ErrorState.jsx'
 import Loading from '../components/Loading.jsx'
 import MapLegend from '../components/MapLegend.jsx'
+import RegionList from '../components/RegionList.jsx'
 import SigunguFilter from '../components/SigunguFilter.jsx'
 import { GRADE_COLORS, NO_DATA_COLOR } from '../lib/gradeStyles.js'
 import { DAEJEON_SIGUNGU, MAJOR_CATEGORIES } from '../lib/mapFilters.js'
@@ -33,8 +34,10 @@ function MapPage() {
   const [regionScores, setRegionScores] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedSigungu, setSelectedSigungu] = useState(DAEJEON_SIGUNGU)
+  const [highlightedDongCode, setHighlightedDongCode] = useState(null)
   const [error, setError] = useState(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const layerByDongCode = useRef(new Map())
 
   useEffect(() => {
     const controller = new AbortController()
@@ -79,28 +82,67 @@ function MapPage() {
     }
   }, [geojson, selectedCategory])
 
-  const gradeByDongCode = new Map(
-    regionScores.map((item) => [item.dongCode, item]),
+  const gradeByDongCode = useMemo(
+    () => new Map(regionScores.map((item) => [item.dongCode, item])),
+    [regionScores],
   )
 
-  const getBoundaryStyle = (feature) => {
-    const item = gradeByDongCode.get(feature.properties.dong_code)
-    const isSelectedSigungu = selectedSigungu.includes(feature.properties.sggnm)
-    const hasUsableGrade =
-      item?.sampleSizeFlag !== 'LOW' && Boolean(GRADE_COLORS[item?.grade])
+  const getBoundaryStyle = useCallback(
+    (feature) => {
+      const item = gradeByDongCode.get(feature.properties.dong_code)
+      const isSelectedSigungu = selectedSigungu.includes(feature.properties.sggnm)
+      const hasUsableGrade =
+        item?.sampleSizeFlag !== 'LOW' && Boolean(GRADE_COLORS[item?.grade])
 
-    return {
-      color: '#ffffff',
-      weight: 1.1,
-      opacity: isSelectedSigungu ? 0.95 : 0.25,
-      fillColor: hasUsableGrade ? GRADE_COLORS[item.grade] : NO_DATA_COLOR,
-      fillOpacity: isSelectedSigungu ? 0.8 : 0.08,
-    }
+      return {
+        color: '#ffffff',
+        weight: 1.1,
+        opacity: isSelectedSigungu ? 0.95 : 0.25,
+        fillColor: hasUsableGrade ? GRADE_COLORS[item.grade] : NO_DATA_COLOR,
+        fillOpacity: isSelectedSigungu ? 0.8 : 0.08,
+      }
+    },
+    [gradeByDongCode, selectedSigungu],
+  )
+
+  const onEachFeature = (feature, layer) => {
+    const dongCode = feature.properties.dong_code
+    layerByDongCode.current.set(dongCode, layer)
+    layer.on({
+      mouseover: () => setHighlightedDongCode(dongCode),
+      mouseout: () => setHighlightedDongCode(null),
+    })
   }
+
+  useEffect(() => {
+    layerByDongCode.current.forEach((layer, dongCode) => {
+      const baseStyle = getBoundaryStyle(layer.feature)
+      const isHighlighted = highlightedDongCode === dongCode
+
+      layer.setStyle(
+        isHighlighted
+          ? {
+              ...baseStyle,
+              color: '#173d31',
+              weight: 3.2,
+              opacity: 1,
+              fillOpacity: 0.95,
+            }
+          : baseStyle,
+      )
+
+      if (isHighlighted) {
+        layer.bringToFront()
+      }
+    })
+  }, [getBoundaryStyle, highlightedDongCode])
 
   const selectedCategoryName =
     MAJOR_CATEGORIES.find((category) => category.code === selectedCategory)?.name ??
     '전체 업종'
+  const visibleRegions = regionScores.filter((region) =>
+    selectedSigungu.includes(region.sigungu),
+  )
 
   return (
     <main className="page-container map-page">
@@ -125,40 +167,48 @@ function MapPage() {
         </p>
       </section>
 
-      <section className="map-panel" aria-label="대전 행정동 지도">
-        {!geojson && !error && <Loading message="행정동 경계를 불러오고 있습니다." />}
-        {error && (
-          <ErrorState
-            message={error.message}
-            onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
-          />
-        )}
-        {geojson && (
-          <>
-            <div className="map-preview-badge">데이터 연동 전 색상 미리보기</div>
-            <MapLegend />
-            <MapContainer
-              className="daejeon-map"
-              center={DAEJEON_CENTER}
-              zoom={11}
-              minZoom={9}
-              maxZoom={16}
-              scrollWheelZoom
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <GeoJSON
-                key={`${selectedCategory}-${selectedSigungu.join('-')}`}
-                data={geojson}
-                style={getBoundaryStyle}
-              />
-              <FitGeoJsonBounds geojson={geojson} />
-            </MapContainer>
-          </>
-        )}
-      </section>
+      <div className="map-workspace">
+        <section className="map-panel" aria-label="대전 행정동 지도">
+          {!geojson && !error && <Loading message="행정동 경계를 불러오고 있습니다." />}
+          {error && (
+            <ErrorState
+              message={error.message}
+              onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
+            />
+          )}
+          {geojson && (
+            <>
+              <div className="map-preview-badge">데이터 연동 전 색상 미리보기</div>
+              <MapLegend />
+              <MapContainer
+                className="daejeon-map"
+                center={DAEJEON_CENTER}
+                zoom={11}
+                minZoom={9}
+                maxZoom={16}
+                scrollWheelZoom
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <GeoJSON
+                  key={`${selectedCategory}-${selectedSigungu.join('-')}`}
+                  data={geojson}
+                  style={getBoundaryStyle}
+                  onEachFeature={onEachFeature}
+                />
+                <FitGeoJsonBounds geojson={geojson} />
+              </MapContainer>
+            </>
+          )}
+        </section>
+        <RegionList
+          regions={visibleRegions}
+          highlightedDongCode={highlightedDongCode}
+          onHighlight={setHighlightedDongCode}
+        />
+      </div>
     </main>
   )
 }
