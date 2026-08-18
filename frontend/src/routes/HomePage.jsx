@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import AiPromptBox from '../components/AiPromptBox.jsx'
 import SummaryCard from '../components/SummaryCard.jsx'
 import TopRegionList from '../components/TopRegionList.jsx'
 import mockSummary from '../lib/mockSummary.js'
@@ -109,6 +110,10 @@ function HomePage() {
         </p>
         <TopRegionList regions={data.topRegions} />
       </section>
+
+      <div className="ai-prompt-wrapper">
+        <AiPromptBox />
+      </div>
     </main>
   )
 }
