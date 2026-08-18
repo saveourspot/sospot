@@ -21,11 +21,14 @@
 
 ## 정규화 절차
 
-원본을 받은 뒤 다음 스크립트 실행 (P1-05 완료 후):
+원본을 받은 뒤 저장소 루트에서 다음 스크립트를 실행합니다:
 
 ```bash
 python pipeline/scripts/normalize_geo.py
 ```
+
+스크립트는 대전 feature 수, 8자리 행정동코드의 유일성, 좌표 범위를 검증한 뒤
+UTF-8 GeoJSON을 생성합니다. 같은 원본으로 재실행하면 동일한 파일이 생성됩니다.
 
 산출물: `daejeon_dong.geojson`
 - 대전 82개 feature만 필터 (`sido == '30'`)
