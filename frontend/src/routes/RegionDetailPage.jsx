@@ -147,6 +147,51 @@ function RegionDetailPage() {
           BSI를 의미하지 않습니다.
         </p>
       </section>
+
+      <section className="excluded-categories" aria-labelledby="excluded-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">판정 제외</p>
+            <h2 id="excluded-heading">표본 부족 업종</h2>
+          </div>
+          <p className="period-label">상세 분석 API 연동 예정</p>
+        </div>
+        <p className="section-description">
+          기준 분기보다 두 분기 전 점포 수가 20개 미만인 업종은 이상징후
+          점수와 등급을 계산하지 않습니다.
+        </p>
+        <div className="excluded-categories__pending" role="status">
+          <span aria-hidden="true">i</span>
+          <div>
+            <strong>판정 제외 업종 데이터 연동 대기</strong>
+            <p>
+              상세 분석 API가 연결되면 표본 부족으로 판정에서 제외된 업종을
+              이곳에 표시합니다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="later-features" aria-labelledby="later-features-heading">
+        <div>
+          <p className="eyebrow">후순위 기능</p>
+          <h2 id="later-features-heading">추가 분석 화면</h2>
+          <p>
+            핵심 MVP 완성 후 업종 분석과 지역 비교 전용 화면을 순차적으로
+            준비합니다.
+          </p>
+        </div>
+        <div className="later-features__items">
+          <div aria-disabled="true">
+            <strong>업종 분석</strong>
+            <span>F3 · 준비 중</span>
+          </div>
+          <div aria-disabled="true">
+            <strong>지역 비교</strong>
+            <span>F4 · 준비 중</span>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }
