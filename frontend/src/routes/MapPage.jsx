@@ -29,6 +29,35 @@ function FitGeoJsonBounds({ geojson }) {
   return null
 }
 
+function createTooltipContent(feature, item) {
+  const container = document.createElement('div')
+  container.className = 'region-tooltip'
+
+  const heading = document.createElement('strong')
+  heading.textContent = feature.properties.dong_name
+
+  const sigungu = document.createElement('span')
+  sigungu.className = 'region-tooltip__sigungu'
+  sigungu.textContent = feature.properties.sggnm
+
+  const details = document.createElement('dl')
+  const gradeLabel = document.createElement('dt')
+  const gradeValue = document.createElement('dd')
+  const anomalyLabel = document.createElement('dt')
+  const anomalyValue = document.createElement('dd')
+
+  gradeLabel.textContent = '등급'
+  gradeValue.textContent = item?.grade ?? '데이터 없음'
+  anomalyLabel.textContent = '이상 업종 수'
+  anomalyValue.textContent = Number.isInteger(item?.anomalyCatCount)
+    ? `${item.anomalyCatCount}개`
+    : 'API 연동 후 표시'
+
+  details.append(gradeLabel, gradeValue, anomalyLabel, anomalyValue)
+  container.append(heading, sigungu, details)
+  return container
+}
+
 function MapPage() {
   const [geojson, setGeojson] = useState(null)
   const [regionScores, setRegionScores] = useState([])
@@ -108,6 +137,12 @@ function MapPage() {
   const onEachFeature = (feature, layer) => {
     const dongCode = feature.properties.dong_code
     layerByDongCode.current.set(dongCode, layer)
+    layer.bindTooltip(createTooltipContent(feature, gradeByDongCode.get(dongCode)), {
+      className: 'region-map-tooltip',
+      direction: 'top',
+      opacity: 1,
+      sticky: true,
+    })
     layer.on({
       mouseover: () => setHighlightedDongCode(dongCode),
       mouseout: () => setHighlightedDongCode(null),
@@ -118,6 +153,9 @@ function MapPage() {
     layerByDongCode.current.forEach((layer, dongCode) => {
       const baseStyle = getBoundaryStyle(layer.feature)
       const isHighlighted = highlightedDongCode === dongCode
+      layer.setTooltipContent(
+        createTooltipContent(layer.feature, gradeByDongCode.get(dongCode)),
+      )
 
       layer.setStyle(
         isHighlighted
@@ -135,7 +173,7 @@ function MapPage() {
         layer.bringToFront()
       }
     })
-  }, [getBoundaryStyle, highlightedDongCode])
+  }, [getBoundaryStyle, gradeByDongCode, highlightedDongCode])
 
   const selectedCategoryName =
     MAJOR_CATEGORIES.find((category) => category.code === selectedCategory)?.name ??
