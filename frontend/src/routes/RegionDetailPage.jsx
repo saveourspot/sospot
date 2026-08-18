@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import AnomalyCategoryCard from '../components/AnomalyCategoryCard.jsx'
 import Empty from '../components/Empty.jsx'
 import ErrorState from '../components/ErrorState.jsx'
 import Loading from '../components/Loading.jsx'
@@ -106,6 +107,25 @@ function RegionDetailPage() {
         <span>
           이 지표는 미래를 예측하거나 정책지원 대상을 자동 결정하지 않습니다.
         </span>
+      </section>
+
+      <section className="top-anomalies" aria-labelledby="top-anomalies-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">업종별 판정 근거</p>
+            <h2 id="top-anomalies-heading">이상 업종 TOP 3</h2>
+          </div>
+          <p className="period-label">상세 분석 API 연동 예정</p>
+        </div>
+        <p className="section-description">
+          업종별 점포 수 변화와 대전 전체 동일 업종 흐름의 상대격차를 함께
+          확인합니다.
+        </p>
+        <div className="anomaly-card-grid">
+          {[1, 2, 3].map((rank) => (
+            <AnomalyCategoryCard key={rank} rank={rank} anomaly={null} />
+          ))}
+        </div>
       </section>
     </main>
   )

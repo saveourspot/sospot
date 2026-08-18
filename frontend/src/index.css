@@ -959,6 +959,162 @@ a {
   font-size: 0.72rem;
 }
 
+.top-anomalies {
+  padding-top: 20px;
+}
+
+.anomaly-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.anomaly-card {
+  overflow: hidden;
+  min-height: 290px;
+  padding: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: 0 10px 28px rgb(28 57 45 / 6%);
+}
+
+.anomaly-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.anomaly-card__heading > span {
+  display: inline-grid;
+  min-width: 36px;
+  height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  color: #9b3e2b;
+  background: #fde2dc;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.anomaly-card__heading > strong {
+  color: #26352e;
+  font-size: 1rem;
+}
+
+.anomaly-sparkline {
+  margin-top: 22px;
+}
+
+.anomaly-sparkline svg {
+  display: block;
+  width: 100%;
+  height: 70px;
+  overflow: visible;
+}
+
+.anomaly-sparkline polyline {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.anomaly-sparkline > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.anomaly-sparkline span {
+  display: grid;
+  gap: 2px;
+  color: #33443b;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.anomaly-sparkline small {
+  overflow: hidden;
+  color: #78857f;
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+}
+
+.anomaly-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 22px 0 0;
+}
+
+.anomaly-card__metrics > div {
+  padding: 10px 8px;
+  border-radius: 9px;
+  background: #f4f7f5;
+  text-align: center;
+}
+
+.anomaly-card__metrics dt {
+  color: #748078;
+  font-size: 0.62rem;
+}
+
+.anomaly-card__metrics dd {
+  margin: 5px 0 0;
+  color: #35463d;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.anomaly-card__metrics .anomaly-card__relative-gap {
+  background: #fff0ec;
+}
+
+.anomaly-card__relative-gap dd {
+  color: #a14732;
+}
+
+.anomaly-card--pending {
+  color: #738078;
+  background: #fafbfa;
+}
+
+.anomaly-card--pending > p {
+  margin: 22px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.anomaly-card__placeholder {
+  display: grid;
+  height: 92px;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: 12px;
+  margin-top: 24px;
+  border-bottom: 1px solid #dfe5e2;
+}
+
+.anomaly-card__placeholder span {
+  border-radius: 6px 6px 0 0;
+  background: #e7ece9;
+}
+
+.anomaly-card__placeholder span:nth-child(1) {
+  height: 42%;
+}
+
+.anomaly-card__placeholder span:nth-child(2) {
+  height: 68%;
+}
+
+.anomaly-card__placeholder span:nth-child(3) {
+  height: 54%;
+}
+
 .site-header {
   position: sticky;
   z-index: 100;
@@ -1294,6 +1450,16 @@ a {
 
   .reason-summary > span {
     grid-column: auto;
+  }
+
+  .anomaly-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 960px) {
+  .anomaly-card-grid {
+    grid-template-columns: 1fr;
   }
 }
 
