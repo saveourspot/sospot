@@ -5,6 +5,7 @@ import Empty from '../components/Empty.jsx'
 import ErrorState from '../components/ErrorState.jsx'
 import Loading from '../components/Loading.jsx'
 import RegionHeader from '../components/RegionHeader.jsx'
+import TrendChart from '../components/TrendChart.jsx'
 
 const GEOJSON_URL = `${import.meta.env.BASE_URL}geo/daejeon_dong.geojson`
 
@@ -126,6 +127,25 @@ function RegionDetailPage() {
             <AnomalyCategoryCard key={rank} rank={rank} anomaly={null} />
           ))}
         </div>
+      </section>
+
+      <section className="trend-section" aria-labelledby="trend-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">최근 변화 비교</p>
+            <h2 id="trend-heading">지역과 대전 전체 추세</h2>
+          </div>
+          <p className="period-label">3개 분석 분기 · API 연동 예정</p>
+        </div>
+        <p className="section-description">
+          해당 지역과 대전 전체 동일 업종의 점포 수 흐름을 같은 축에서 비교하고,
+          대전 체감 BSI는 보조적인 경기 맥락으로만 제공합니다.
+        </p>
+        <TrendChart series={[]} />
+        <p className="trend-section__notice">
+          BSI는 이상징후 Score와 등급 계산에 사용되지 않으며, 지역×업종 교차
+          BSI를 의미하지 않습니다.
+        </p>
       </section>
     </main>
   )
