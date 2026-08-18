@@ -495,6 +495,7 @@ a {
 }
 
 .map-panel {
+  position: relative;
   overflow: hidden;
   min-height: 620px;
   border: 1px solid var(--color-border);
@@ -518,6 +519,76 @@ a {
 .daejeon-map .leaflet-control-attribution {
   color: #5d6963;
   font-size: 10px;
+}
+
+.map-preview-badge {
+  position: absolute;
+  z-index: 600;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid #e7c976;
+  border-radius: 999px;
+  padding: 6px 11px;
+  color: #634c0d;
+  background: rgb(255 247 215 / 96%);
+  box-shadow: 0 4px 12px rgb(57 46 17 / 12%);
+  font-size: 0.75rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.map-legend {
+  position: absolute;
+  z-index: 600;
+  right: 14px;
+  bottom: 28px;
+  width: 190px;
+  padding: 14px;
+  border: 1px solid rgb(84 101 93 / 20%);
+  border-radius: 12px;
+  color: #34443c;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 8px 24px rgb(25 46 37 / 16%);
+  backdrop-filter: blur(6px);
+}
+
+.map-legend > strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+}
+
+.map-legend ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+}
+
+.map-legend li span {
+  width: 18px;
+  height: 12px;
+  flex: none;
+  border: 1px solid rgb(56 67 62 / 18%);
+  border-radius: 3px;
+}
+
+.map-legend p {
+  margin: 11px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid #e3e8e5;
+  color: #65726c;
+  font-size: 0.66rem;
+  line-height: 1.45;
 }
 
 .site-header {
@@ -804,6 +875,17 @@ a {
   .daejeon-map {
     min-height: 520px;
     height: 520px;
+  }
+
+  .map-legend {
+    right: 8px;
+    bottom: 24px;
+    width: 165px;
+    padding: 11px;
+  }
+
+  .map-legend p {
+    display: none;
   }
 }
 

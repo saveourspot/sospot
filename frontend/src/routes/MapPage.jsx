@@ -3,18 +3,13 @@ import L from 'leaflet'
 import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
 import ErrorState from '../components/ErrorState.jsx'
 import Loading from '../components/Loading.jsx'
+import MapLegend from '../components/MapLegend.jsx'
+import { GRADE_COLORS, NO_DATA_COLOR } from '../lib/gradeStyles.js'
+import { createPreviewRegionScores } from '../lib/mockRegionScores.js'
 
 const DAEJEON_CENTER = [36.35, 127.38]
 const EXPECTED_DONG_COUNT = 82
 const GEOJSON_URL = `${import.meta.env.BASE_URL}geo/daejeon_dong.geojson`
-
-const boundaryStyle = {
-  color: '#176b52',
-  weight: 1.2,
-  opacity: 0.9,
-  fillColor: '#cfe5dc',
-  fillOpacity: 0.58,
-}
 
 function FitGeoJsonBounds({ geojson }) {
   const map = useMap()
@@ -32,6 +27,7 @@ function FitGeoJsonBounds({ geojson }) {
 
 function MapPage() {
   const [geojson, setGeojson] = useState(null)
+  const [regionScores, setRegionScores] = useState([])
   const [error, setError] = useState(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
 
@@ -59,6 +55,7 @@ function MapPage() {
         }
 
         setGeojson(data)
+        setRegionScores(createPreviewRegionScores(data.features))
       } catch (loadError) {
         if (loadError.name !== 'AbortError') {
           setError(loadError)
@@ -69,6 +66,24 @@ function MapPage() {
     loadGeojson()
     return () => controller.abort()
   }, [loadAttempt])
+
+  const gradeByDongCode = new Map(
+    regionScores.map((item) => [item.dongCode, item]),
+  )
+
+  const getBoundaryStyle = (feature) => {
+    const item = gradeByDongCode.get(feature.properties.dong_code)
+    const hasUsableGrade =
+      item?.sampleSizeFlag !== 'LOW' && Boolean(GRADE_COLORS[item?.grade])
+
+    return {
+      color: '#ffffff',
+      weight: 1.1,
+      opacity: 0.95,
+      fillColor: hasUsableGrade ? GRADE_COLORS[item.grade] : NO_DATA_COLOR,
+      fillOpacity: 0.8,
+    }
+  }
 
   return (
     <main className="page-container map-page">
@@ -94,21 +109,25 @@ function MapPage() {
           />
         )}
         {geojson && (
-          <MapContainer
-            className="daejeon-map"
-            center={DAEJEON_CENTER}
-            zoom={11}
-            minZoom={9}
-            maxZoom={16}
-            scrollWheelZoom
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <GeoJSON data={geojson} style={boundaryStyle} />
-            <FitGeoJsonBounds geojson={geojson} />
-          </MapContainer>
+          <>
+            <div className="map-preview-badge">데이터 연동 전 색상 미리보기</div>
+            <MapLegend />
+            <MapContainer
+              className="daejeon-map"
+              center={DAEJEON_CENTER}
+              zoom={11}
+              minZoom={9}
+              maxZoom={16}
+              scrollWheelZoom
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <GeoJSON data={geojson} style={getBoundaryStyle} />
+              <FitGeoJsonBounds geojson={geojson} />
+            </MapContainer>
+          </>
         )}
       </section>
     </main>
