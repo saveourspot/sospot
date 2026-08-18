@@ -34,7 +34,11 @@ function HomePage() {
       <section className="home-hero">
         <div className="home-hero__content">
           <p className="eyebrow">대전 소상공인 상권 변화 모니터링</p>
-          <h1>최근 변화가 두드러진 지역을 먼저 살펴보세요</h1>
+          <h1>
+            상권의 작은 변화를,
+            <br />
+            <em>놓치지 않도록.</em>
+          </h1>
           <p className="home-hero__description">
             SOSpot은 행정동별 점포 수 변화를 대전 전체 동일 업종 흐름과
             비교하여, 정책 담당자가 우선 검토할 후보를 찾도록 돕습니다.
@@ -45,11 +49,31 @@ function HomePage() {
             </Link>
             <span>예측이 아닌 최근 데이터 기반 상대 비교 분석입니다.</span>
           </div>
+          <div className="home-hero__meta" aria-label="서비스 분석 범위">
+            <span><strong>82</strong>개 행정동</span>
+            <span><strong>10</strong>개 대분류 업종</span>
+            <span><strong>3</strong>개 분기 비교</span>
+          </div>
         </div>
-        <div className="home-hero__signal" aria-hidden="true">
-          <span className="home-hero__signal-ring" />
-          <span className="home-hero__signal-dot" />
-          <strong>SOS</strong>
+        <div className="home-hero__visual" aria-hidden="true">
+          <div className="home-hero__visual-header">
+            <span>대전 상권 시그널</span>
+            <i>MONITOR</i>
+          </div>
+          <div className="home-hero__signal">
+            <span className="home-hero__signal-ring home-hero__signal-ring--outer" />
+            <span className="home-hero__signal-ring home-hero__signal-ring--inner" />
+            <span className="home-hero__signal-sweep" />
+            <span className="home-hero__signal-dot home-hero__signal-dot--one" />
+            <span className="home-hero__signal-dot home-hero__signal-dot--two" />
+            <span className="home-hero__signal-dot home-hero__signal-dot--three" />
+            <strong>82</strong>
+            <small>행정동 분석</small>
+          </div>
+          <div className="home-hero__visual-footer">
+            <span><i className="status-dot" /> 분석 준비</span>
+            <span>상대 비교 기반</span>
+          </div>
         </div>
       </section>
 
