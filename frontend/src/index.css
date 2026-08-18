@@ -494,6 +494,100 @@ a {
   font-weight: 750;
 }
 
+.map-filters {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) minmax(360px, 1fr) auto;
+  align-items: end;
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.filter-field,
+.sigungu-filter {
+  min-width: 0;
+}
+
+.filter-field > span,
+.sigungu-filter legend {
+  display: block;
+  margin-bottom: 7px;
+  color: #4f5e57;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.filter-field select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #cfd9d3;
+  border-radius: 9px;
+  padding: 0 34px 0 11px;
+  color: #26352e;
+  background: #ffffff;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.sigungu-filter {
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.sigungu-filter > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.sigungu-filter label {
+  position: relative;
+  cursor: pointer;
+}
+
+.sigungu-filter input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.sigungu-filter label span {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border: 1px solid #cfd9d3;
+  border-radius: 9px;
+  padding: 0 11px;
+  color: #5a6961;
+  background: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.sigungu-filter input:checked + span {
+  border-color: #87b7a6;
+  color: var(--color-primary-dark);
+  background: #e8f3ee;
+}
+
+.sigungu-filter input:focus-visible + span,
+.filter-field select:focus-visible {
+  outline: 3px solid #a8d0c1;
+  outline-offset: 2px;
+}
+
+.map-filters__status {
+  margin: 0 0 10px;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
 .map-panel {
   position: relative;
   overflow: hidden;
@@ -868,6 +962,15 @@ a {
   .map-page__heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .map-filters {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .map-filters__status {
+    margin: 0;
   }
 
   .map-panel,

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import L from 'leaflet'
 import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
+import CategoryFilter from '../components/CategoryFilter.jsx'
 import ErrorState from '../components/ErrorState.jsx'
 import Loading from '../components/Loading.jsx'
 import MapLegend from '../components/MapLegend.jsx'
+import SigunguFilter from '../components/SigunguFilter.jsx'
 import { GRADE_COLORS, NO_DATA_COLOR } from '../lib/gradeStyles.js'
+import { DAEJEON_SIGUNGU, MAJOR_CATEGORIES } from '../lib/mapFilters.js'
 import { createPreviewRegionScores } from '../lib/mockRegionScores.js'
 
 const DAEJEON_CENTER = [36.35, 127.38]
@@ -28,6 +31,8 @@ function FitGeoJsonBounds({ geojson }) {
 function MapPage() {
   const [geojson, setGeojson] = useState(null)
   const [regionScores, setRegionScores] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedSigungu, setSelectedSigungu] = useState(DAEJEON_SIGUNGU)
   const [error, setError] = useState(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
 
@@ -55,7 +60,6 @@ function MapPage() {
         }
 
         setGeojson(data)
-        setRegionScores(createPreviewRegionScores(data.features))
       } catch (loadError) {
         if (loadError.name !== 'AbortError') {
           setError(loadError)
@@ -67,23 +71,36 @@ function MapPage() {
     return () => controller.abort()
   }, [loadAttempt])
 
+  useEffect(() => {
+    if (geojson) {
+      setRegionScores(
+        createPreviewRegionScores(geojson.features, selectedCategory),
+      )
+    }
+  }, [geojson, selectedCategory])
+
   const gradeByDongCode = new Map(
     regionScores.map((item) => [item.dongCode, item]),
   )
 
   const getBoundaryStyle = (feature) => {
     const item = gradeByDongCode.get(feature.properties.dong_code)
+    const isSelectedSigungu = selectedSigungu.includes(feature.properties.sggnm)
     const hasUsableGrade =
       item?.sampleSizeFlag !== 'LOW' && Boolean(GRADE_COLORS[item?.grade])
 
     return {
       color: '#ffffff',
       weight: 1.1,
-      opacity: 0.95,
+      opacity: isSelectedSigungu ? 0.95 : 0.25,
       fillColor: hasUsableGrade ? GRADE_COLORS[item.grade] : NO_DATA_COLOR,
-      fillOpacity: 0.8,
+      fillOpacity: isSelectedSigungu ? 0.8 : 0.08,
     }
   }
+
+  const selectedCategoryName =
+    MAJOR_CATEGORIES.find((category) => category.code === selectedCategory)?.name ??
+    '전체 업종'
 
   return (
     <main className="page-container map-page">
@@ -99,6 +116,14 @@ function MapPage() {
           <span className="map-page__count">경계 {geojson.features.length}개 로드</span>
         )}
       </div>
+
+      <section className="map-filters" aria-label="지도 필터">
+        <CategoryFilter value={selectedCategory} onChange={setSelectedCategory} />
+        <SigunguFilter selected={selectedSigungu} onChange={setSelectedSigungu} />
+        <p className="map-filters__status" aria-live="polite">
+          {selectedCategoryName} · 자치구 {selectedSigungu.length}개 선택
+        </p>
+      </section>
 
       <section className="map-panel" aria-label="대전 행정동 지도">
         {!geojson && !error && <Loading message="행정동 경계를 불러오고 있습니다." />}
@@ -124,7 +149,11 @@ function MapPage() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <GeoJSON data={geojson} style={getBoundaryStyle} />
+              <GeoJSON
+                key={`${selectedCategory}-${selectedSigungu.join('-')}`}
+                data={geojson}
+                style={getBoundaryStyle}
+              />
               <FitGeoJsonBounds geojson={geojson} />
             </MapContainer>
           </>
