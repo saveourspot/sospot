@@ -14,6 +14,7 @@ const mockSummary = {
       periodMonth: '2026-05',
       value: 60.0,
     },
+    topRegions: [],
   },
 }
 

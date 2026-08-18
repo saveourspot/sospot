@@ -244,6 +244,95 @@ a {
   border-top: 4px solid #bc8a3e;
 }
 
+.top-regions-section {
+  width: min(100% - 40px, var(--content-width));
+  margin-inline: auto;
+  padding-block: 64px 80px;
+}
+
+.text-link {
+  color: var(--color-primary-dark);
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.section-description {
+  max-width: 660px;
+  margin: -10px 0 24px;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.top-region-list {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  list-style: none;
+}
+
+.top-region-list li + li {
+  border-top: 1px solid #e7ece9;
+}
+
+.top-region-item {
+  display: grid;
+  min-height: 72px;
+  grid-template-columns: 42px minmax(120px, 1fr) auto auto 24px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.top-region-item:hover {
+  background: #f3f8f5;
+}
+
+.top-region-item:focus-visible {
+  outline: 3px solid #81b5a2;
+  outline-offset: -3px;
+}
+
+.top-region-item__rank {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--color-primary-dark);
+  background: #e8f3ee;
+  font-weight: 800;
+}
+
+.top-region-item__name {
+  color: #24312b;
+  font-weight: 750;
+}
+
+.top-region-item__score {
+  min-width: 54px;
+  color: #536159;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.top-region-item__arrow {
+  color: #7a8981;
+  font-size: 1.1rem;
+}
+
 .site-header {
   position: sticky;
   z-index: 100;
@@ -480,6 +569,21 @@ a {
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .top-regions-section {
+    width: min(100% - 28px, var(--content-width));
+    padding-block: 48px 60px;
+  }
+
+  .top-region-item {
+    grid-template-columns: 38px minmax(88px, 1fr) auto 20px;
+    gap: 9px;
+    padding-inline: 12px;
+  }
+
+  .top-region-item__score {
+    display: none;
   }
 }
 

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import SummaryCard from '../components/SummaryCard.jsx'
+import TopRegionList from '../components/TopRegionList.jsx'
 import mockSummary from '../lib/mockSummary.js'
 
 function formatPercent(value) {
@@ -90,6 +91,23 @@ function HomePage() {
             tone="bsi"
           />
         </div>
+      </section>
+
+      <section className="top-regions-section" aria-labelledby="top-regions-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">먼저 살펴볼 지역</p>
+            <h2 id="top-regions-heading">우선검토 지역 TOP 5</h2>
+          </div>
+          <Link className="text-link" to="/map">
+            지도에서 전체 보기 →
+          </Link>
+        </div>
+        <p className="section-description">
+          행정동 종합 percentile을 기준으로 대전 내 상대적 검토 순서를
+          보여줍니다.
+        </p>
+        <TopRegionList regions={data.topRegions} />
       </section>
     </main>
   )
