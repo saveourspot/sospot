@@ -5,7 +5,11 @@ from datetime import date
 
 import pandas as pd
 
-from pipeline.src.dimensions import build_dim_category, build_dim_period
+from pipeline.src.dimensions import (
+    _build_dong_row,
+    build_dim_category,
+    build_dim_period,
+)
 
 
 class DimensionsTest(unittest.TestCase):
@@ -68,6 +72,39 @@ class DimensionsTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "conflicting mappings"):
             build_dim_category(frame)
+
+    def test_build_dong_row_calculates_multipolygon_centroid(self) -> None:
+        feature = {
+            "type": "Feature",
+            "properties": {
+                "adm_cd2": "3011055100",
+                "adm_nm": "대전광역시 동구 판암1동",
+                "sggnm": "동구",
+                "dong_code": "30110551",
+            },
+            "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                    [
+                        [
+                            [127.0, 36.0],
+                            [128.0, 36.0],
+                            [128.0, 37.0],
+                            [127.0, 37.0],
+                            [127.0, 36.0],
+                        ]
+                    ]
+                ],
+            },
+        }
+
+        dong = _build_dong_row(feature)
+
+        self.assertEqual(dong["dong_code"], "30110551")
+        self.assertEqual(dong["sigungu"], "동구")
+        self.assertEqual(dong["dong_name"], "판암1동")
+        self.assertAlmostEqual(dong["center_lat"], 36.5)
+        self.assertAlmostEqual(dong["center_lng"], 127.5)
 
 
 if __name__ == "__main__":
