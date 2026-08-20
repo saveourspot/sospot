@@ -321,7 +321,7 @@ fact_bsi(period_month, metric_name, value)   -- long 포맷으로 변환 적재
 4. 분기 간 코드셋 diff 검증 → 변경 시 경고 (현재 3분기 모두 동일)
 5. `fact_store_count` 대분류·중분류 2단 집계
 6. 지표 계산 → `fact_anomaly`, `fact_dong_score` 적재
-7. BSI CSV(cp949) 로드 → long 변환 → 결측 항목 제외 적재
+7. BSI CSV(cp949) 로드 → long 변환 → 결측값은 `NULL`로 보존하여 적재
 8. **검증 리포트 출력**: 분기별 총 점포수, 행정동 수, 소표본 비율, 코드셋 diff
 
 ---
