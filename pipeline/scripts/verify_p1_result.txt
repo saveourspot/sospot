@@ -1,0 +1,28 @@
+SOSpot P1 validation result
+===========================
+
+Status: PASS
+
+Store totals (MAJOR)
+- 202512: 78,246
+- 202603: 78,607
+- 202606: 80,704
+
+Dimensions
+- dim_dong: 82
+- dim_category MAJOR: 10
+- dim_category MIDDLE: 74
+
+BSI
+- source columns: 72 (2 identifiers + 70 metrics)
+- distinct metric_name: 70
+- 대전체감 2026-04: 56.40
+- 대전체감 2026-05: 63.60
+- 대전체감 2026-06: NULL
+- 2026 Q2 available-month average: 60.0
+
+Integrity
+- fact/category level mismatches: 0
+- missing dong center coordinates: 0
+- pipeline unit tests: 14 passed
+- repeated dimension, store-count, and BSI loads: passed
