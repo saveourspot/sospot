@@ -3,10 +3,13 @@ from __future__ import annotations
 import math
 import unittest
 
+import numpy as np
 import pandas as pd
 
 from pipeline.src.metrics import (
+    _grade_for_score,
     compute_combination_metrics,
+    compute_scores,
     determine_analyzable_periods,
 )
 
@@ -142,6 +145,136 @@ class ComputeCombinationMetricsTest(unittest.TestCase):
         self.assertTrue(math.isnan(row["cum_change_rate"]))
         self.assertFalse(bool(row["consecutive_decline"]))
         self.assertEqual(row["sample_size_flag"], "LOW")
+
+
+def _make_metrics_row(
+    dong: str,
+    cat: str,
+    *,
+    cat_level: str = "MAJOR",
+    growth: float,
+    city_growth: float,
+    cum: float,
+    consecutive: bool,
+    flag: str = "OK",
+    store_count: int = 50,
+) -> dict[str, object]:
+    return {
+        "dong_code": dong,
+        "cat_code": cat,
+        "period_id": "202606",
+        "cat_level": cat_level,
+        "store_count": store_count,
+        "growth_rate": growth,
+        "city_growth_rate": city_growth,
+        "relative_gap": growth - city_growth,
+        "cum_change_rate": cum,
+        "consecutive_decline": consecutive,
+        "sample_size_flag": flag,
+    }
+
+
+class ComputeScoresTest(unittest.TestCase):
+    def test_grades_are_assigned_by_threshold_bands(self) -> None:
+        # 인위적으로 서로 다른 RD/CUM/연속감소 조합을 만들어 점수 분포를 유도
+        rows = [
+            # rank 1 (가장 나쁨): RD/CUM 최하위 + 연속감소 → 최고점
+            _make_metrics_row("D01", "A", growth=-0.30, city_growth=0.10, cum=-0.40, consecutive=True),
+            # rank 2: 두 번째로 나쁨 + 연속감소
+            _make_metrics_row("D02", "A", growth=-0.20, city_growth=0.10, cum=-0.30, consecutive=True),
+            # rank 3: 감소는 있지만 연속감소 아님 → 중간
+            _make_metrics_row("D03", "A", growth=-0.10, city_growth=0.10, cum=-0.20, consecutive=False),
+            # rank 4: 대전과 비슷한 흐름 → 낮은 점수
+            _make_metrics_row("D04", "A", growth=0.00, city_growth=0.10, cum=-0.05, consecutive=False),
+            # rank 5: 오히려 대전보다 좋음 → 최저점
+            _make_metrics_row("D05", "A", growth=0.15, city_growth=0.10, cum=0.10, consecutive=False),
+        ]
+        scored = compute_scores(pd.DataFrame(rows))
+
+        # 점수는 rank 순서대로 단조 감소여야 함
+        scores_by_dong = scored.set_index("dong_code")["score"]
+        self.assertGreater(scores_by_dong["D01"], scores_by_dong["D02"])
+        self.assertGreater(scores_by_dong["D02"], scores_by_dong["D03"])
+        self.assertGreater(scores_by_dong["D03"], scores_by_dong["D04"])
+        self.assertGreater(scores_by_dong["D04"], scores_by_dong["D05"])
+
+        # 각 grade 밴드가 나오는지 (극단 케이스 검증)
+        grades_by_dong = scored.set_index("dong_code")["grade"]
+        # D01: P_rd=100, P_cum=100, C=100 → 0.5*100+0.3*100+0.2*100 = 100 → 중점검토
+        self.assertEqual(grades_by_dong["D01"], "중점검토")
+        # D05: P_rd=20, P_cum=20, C=0 → 0.5*20+0.3*20+0 = 16 → 정상
+        self.assertEqual(grades_by_dong["D05"], "정상")
+
+    def test_grade_boundary_scores_fall_to_lower_band(self) -> None:
+        # 임계값 정확히 걸리는 점수는 아래 등급으로 분류돼야 §1.5 검증 재현이 가능하다.
+        self.assertEqual(_grade_for_score(80.0), "주의")
+        self.assertEqual(_grade_for_score(80.001), "중점검토")
+        self.assertEqual(_grade_for_score(65.0), "관심")
+        self.assertEqual(_grade_for_score(65.001), "주의")
+        self.assertEqual(_grade_for_score(50.0), "정상")
+        self.assertEqual(_grade_for_score(50.001), "관심")
+        self.assertEqual(_grade_for_score(49.999), "정상")
+        self.assertIsNone(_grade_for_score(float("nan")))
+
+    def test_low_sample_flag_rows_get_null_score_and_grade(self) -> None:
+        rows = [
+            _make_metrics_row("D01", "A", growth=-0.30, city_growth=0.10, cum=-0.40, consecutive=True),
+            _make_metrics_row(
+                "D02",
+                "B",
+                growth=-0.20,
+                city_growth=0.05,
+                cum=-0.25,
+                consecutive=True,
+                flag="LOW",
+            ),
+        ]
+        scored = compute_scores(pd.DataFrame(rows))
+        low_row = scored[scored["dong_code"] == "D02"].iloc[0]
+
+        self.assertTrue(math.isnan(low_row["score"]))
+        self.assertIsNone(low_row["grade"])
+
+    def test_percentiles_are_scoped_within_cat_level(self) -> None:
+        # MAJOR와 MIDDLE 풀이 섞이면 랭킹이 달라지므로 분리 계산 검증
+        rows = [
+            _make_metrics_row("D01", "M1", cat_level="MAJOR", growth=-0.10, city_growth=0.00, cum=-0.10, consecutive=False),
+            _make_metrics_row("D02", "M2", cat_level="MAJOR", growth=0.05, city_growth=0.00, cum=0.05, consecutive=False),
+            _make_metrics_row("D01", "S1", cat_level="MIDDLE", growth=-0.90, city_growth=0.00, cum=-0.90, consecutive=True),
+            _make_metrics_row("D02", "S2", cat_level="MIDDLE", growth=0.80, city_growth=0.00, cum=0.80, consecutive=False),
+        ]
+        scored = compute_scores(pd.DataFrame(rows))
+
+        # MIDDLE의 극단값이 MAJOR 점수에 영향을 주면 안 됨
+        # MAJOR D01은 자기 풀 내 최하위 RD → P_rd=100
+        major_d01 = scored[
+            (scored["dong_code"] == "D01") & (scored["cat_level"] == "MAJOR")
+        ].iloc[0]
+        self.assertAlmostEqual(major_d01["score"], 0.5 * 100 + 0.3 * 100 + 0.2 * 0, places=6)
+
+    def test_ok_row_with_nan_gap_produces_nan_score(self) -> None:
+        # OK 표본이지만 이전 분기 결측으로 relative_gap이 NaN인 경우
+        rows = [
+            _make_metrics_row("D01", "A", growth=-0.10, city_growth=0.00, cum=-0.10, consecutive=False),
+            {
+                "dong_code": "D02",
+                "cat_code": "A",
+                "period_id": "202606",
+                "cat_level": "MAJOR",
+                "store_count": 30,
+                "growth_rate": np.nan,
+                "city_growth_rate": 0.0,
+                "relative_gap": np.nan,
+                "cum_change_rate": np.nan,
+                "consecutive_decline": False,
+                "sample_size_flag": "OK",
+            },
+        ]
+        scored = compute_scores(pd.DataFrame(rows))
+        nan_row = scored[scored["dong_code"] == "D02"].iloc[0]
+
+        self.assertTrue(math.isnan(nan_row["score"]))
+        self.assertIsNone(nan_row["grade"])
 
 
 if __name__ == "__main__":

@@ -6,12 +6,24 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import Engine
+from sqlalchemy import Engine, MetaData, Table
+from sqlalchemy.dialects.postgresql import insert
 
 from pipeline.src.db import get_engine
 
 
 SAMPLE_SIZE_THRESHOLD = 20
+
+SCORE_WEIGHT_RD = 0.5
+SCORE_WEIGHT_CUM = 0.3
+SCORE_WEIGHT_CONSECUTIVE = 0.2
+
+GRADE_THRESHOLDS = (
+    (80.0, "중점검토"),
+    (65.0, "주의"),
+    (50.0, "관심"),
+)
+GRADE_DEFAULT = "정상"
 
 METRIC_COLUMNS = (
     "dong_code",
@@ -25,6 +37,22 @@ METRIC_COLUMNS = (
     "cum_change_rate",
     "consecutive_decline",
     "sample_size_flag",
+)
+
+FACT_ANOMALY_COLUMNS = (
+    "dong_code",
+    "cat_code",
+    "period_id",
+    "cat_level",
+    "store_count",
+    "growth_rate",
+    "city_growth_rate",
+    "relative_gap",
+    "cum_change_rate",
+    "consecutive_decline",
+    "sample_size_flag",
+    "score",
+    "grade",
 )
 
 
@@ -172,6 +200,80 @@ def _city_totals(
     )
 
 
+def compute_scores(metrics: pd.DataFrame) -> pd.DataFrame:
+    """Add score and grade columns using per cat_level percentile pools.
+
+    Percentiles are computed only over `sample_size_flag='OK'` rows within each
+    cat_level (MAJOR pool separate from MIDDLE). Rows with NaN inputs (e.g.
+    missing prior-period store counts even under OK) remain NaN and therefore
+    receive NaN score and NULL grade, matching the LOW handling convention.
+    """
+    scored = metrics.copy()
+    scored["score"] = np.nan
+    scored["grade"] = pd.Series([None] * len(scored), dtype=object)
+
+    for cat_level, level_frame in scored.groupby("cat_level", sort=False):
+        ok_mask = level_frame["sample_size_flag"] == "OK"
+        ok_frame = level_frame[ok_mask]
+        if ok_frame.empty:
+            continue
+
+        p_rd = (-ok_frame["relative_gap"]).rank(pct=True) * 100
+        p_cum = (-ok_frame["cum_change_rate"]).rank(pct=True) * 100
+        consecutive_component = ok_frame["consecutive_decline"].astype(float) * 100
+
+        score = (
+            SCORE_WEIGHT_RD * p_rd
+            + SCORE_WEIGHT_CUM * p_cum
+            + SCORE_WEIGHT_CONSECUTIVE * consecutive_component
+        )
+
+        scored.loc[score.index, "score"] = score
+        scored.loc[score.index, "grade"] = score.map(_grade_for_score)
+
+    return scored
+
+
+def _grade_for_score(score: float) -> str | None:
+    if pd.isna(score):
+        return None
+    for threshold, grade in GRADE_THRESHOLDS:
+        # 임계값 정확히 걸리는 점수는 아래 등급으로 취급. 검증 기대값
+        # (§1.5) 관심 119 / 정상 382 재현을 위해 필요.
+        if score > threshold:
+            return grade
+    return GRADE_DEFAULT
+
+
+def load_fact_anomaly(
+    scored: pd.DataFrame,
+    engine: Engine | None = None,
+) -> None:
+    """Upsert scored combinations into fact_anomaly so re-runs stay idempotent."""
+    target_engine = engine or get_engine()
+    table = Table("fact_anomaly", MetaData(), autoload_with=target_engine)
+    payload = scored.loc[:, list(FACT_ANOMALY_COLUMNS)]
+    records = (
+        payload.astype(object).where(pd.notna(payload), None).to_dict(orient="records")
+    )
+    if not records:
+        return
+
+    statement = insert(table).values(records)
+    update_columns = {
+        column: statement.excluded[column]
+        for column in FACT_ANOMALY_COLUMNS
+        if column not in ("dong_code", "cat_code", "period_id")
+    }
+    with target_engine.begin() as connection:
+        connection.execute(
+            statement.on_conflict_do_update(
+                index_elements=["dong_code", "cat_code", "period_id"],
+                set_=update_columns,
+            )
+        )
+
+
 def main() -> None:
     counts = load_fact_store_count()
     analyzable = determine_analyzable_periods(counts)
@@ -179,18 +281,31 @@ def main() -> None:
         print("No analyzable periods (need three consecutive quarters).")
         return
 
+    engine = get_engine()
     for target_period in analyzable:
         metrics = compute_combination_metrics(counts, target_period)
-        summary = (
-            metrics.groupby(["cat_level", "sample_size_flag"], observed=True)
-            .size()
-            .unstack(fill_value=0)
-        )
+        scored = compute_scores(metrics)
+        load_fact_anomaly(scored, engine=engine)
+
         for cat_level in ("MAJOR", "MIDDLE"):
-            ok = int(summary.loc[cat_level, "OK"]) if cat_level in summary.index else 0
-            low = int(summary.loc[cat_level, "LOW"]) if cat_level in summary.index else 0
+            level_frame = scored[scored["cat_level"] == cat_level]
+            ok = int((level_frame["sample_size_flag"] == "OK").sum())
+            low = int((level_frame["sample_size_flag"] == "LOW").sum())
             total = ok + low
-            print(f"{target_period} {cat_level}: total {total} · OK {ok} · LOW {low}")
+            grade_counts = (
+                level_frame[level_frame["sample_size_flag"] == "OK"]["grade"]
+                .value_counts()
+                .to_dict()
+            )
+            grade_str = " · ".join(
+                f"{grade} {grade_counts.get(grade, 0)}"
+                for _, grade in GRADE_THRESHOLDS
+            )
+            grade_str += f" · {GRADE_DEFAULT} {grade_counts.get(GRADE_DEFAULT, 0)}"
+            print(
+                f"{target_period} {cat_level}: total {total} · OK {ok} · LOW {low} "
+                f"| {grade_str}"
+            )
 
 
 if __name__ == "__main__":
