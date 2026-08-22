@@ -14,6 +14,15 @@ GET {{baseUrl}}/summary?period=202606
 # Response: { "period", "comparisonPeriods", "data": { "items": [...] } }
 GET {{baseUrl}}/anomaly/regions?catLevel=MAJOR&sortBy=score&topN=10
 
+### API-2 Category map query (includes LOW rows without fabricated score/grade)
+GET {{baseUrl}}/anomaly/regions?catCode=M1&catLevel=MAJOR&sortBy=score&topN=100
+
+### API-2 Consecutive decline ordered by the most negative relative gap
+GET {{baseUrl}}/anomaly/regions?catLevel=MAJOR&consecutiveDecline=true&sortBy=relativeGap&topN=20
+
+### API-2 Invalid sort: expected 400
+GET {{baseUrl}}/anomaly/regions?sortBy=unknown
+
 ### API-2b Dong composite scores
 # Response items contain dongCode, dongName, sigungu, pctScore, rawScore, grade,
 # anomalyCatCount, validCatCount. The latest completed analysis period is used by default.

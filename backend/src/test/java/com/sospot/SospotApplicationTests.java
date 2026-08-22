@@ -1,6 +1,7 @@
 package org.example.sospot;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.example.sospot.repository.AnomalyRepository;
@@ -12,6 +13,7 @@ import org.example.sospot.repository.PeriodRepository;
 import org.example.sospot.repository.StoreCountRepository;
 import org.example.sospot.service.RegionScoreService;
 import org.example.sospot.service.SummaryService;
+import org.example.sospot.service.AnomalyRegionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -27,6 +29,7 @@ class SospotApplicationTests {
   @Autowired private BsiRepository bsiRepository;
   @Autowired private SummaryService summaryService;
   @Autowired private RegionScoreService regionScoreService;
+  @Autowired private AnomalyRegionService anomalyRegionService;
 
   @Test
   void contextLoads() {
@@ -65,6 +68,35 @@ class SospotApplicationTests {
     assertThat(response.period()).isEqualTo("202606");
     assertThat(response.data().items()).hasSize(82);
     assertThat(response.data().items().get(0).pctScore()).isEqualByComparingTo("100.000");
+  }
+
+  @Test
+  void anomalySearchSupportsFiltersSortAndLimit() {
+    var top = anomalyRegionService.search(null, null, "MAJOR", null, null, "score", 10);
+
+    assertThat(top.period()).isEqualTo("202606");
+    assertThat(top.data().items()).hasSize(10);
+    assertThat(top.data().items().get(0).dongName()).isEqualTo("판암1동");
+    assertThat(top.data().items().get(0).catName()).isEqualTo("과학·기술");
+    assertThat(top.data().items().get(0).score()).isEqualByComparingTo("100.000");
+
+    var science = anomalyRegionService.search(null, "M1", "MAJOR", null, null, "score", 100);
+    assertThat(science.data().items()).allMatch(item -> item.catCode().equals("M1"));
+    assertThat(science.data().items()).anyMatch(item -> item.sampleSizeFlag().equals("LOW"));
+
+    var declining =
+        anomalyRegionService.search(null, null, "MAJOR", null, true, "relativeGap", 20);
+    assertThat(declining.data().items()).allMatch(item -> item.consecutiveDecline());
+  }
+
+  @Test
+  void anomalySearchRejectsUnknownSort() {
+    assertThatThrownBy(
+            () ->
+                anomalyRegionService.search(
+                    null, null, "MAJOR", null, null, "unknown", 10))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("400 BAD_REQUEST");
   }
 
 }
