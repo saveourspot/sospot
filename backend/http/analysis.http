@@ -1,9 +1,23 @@
 @baseUrl = http://localhost:8080/api
 
+# SOSpot analysis API contract
+# Every successful response uses: { "period", "comparisonPeriods", "data" }
+# period defaults to the latest period present in fact_dong_score.
+# comparisonPeriods contains the analysis periods used by the response.
+
 ### API-1 Main summary
 # Response: { "period", "comparisonPeriods", "data": { "analyzedDongCount",
 # "gradeCounts", "cityStoreGrowthRate", "latestBsi", "topRegions" } }
 GET {{baseUrl}}/summary
+> {%
+  client.test("API-1 summary contract", function () {
+    client.assert(response.status === 200, "Expected HTTP 200");
+    client.assert(response.body.period === "202606", "Expected latest analyzed period");
+    client.assert(response.body.comparisonPeriods.length === 3, "Expected three periods");
+    client.assert(response.body.data.analyzedDongCount === 82, "Expected 82 dongs");
+    client.assert(response.body.data.topRegions.length === 5, "Expected top five regions");
+  });
+%}
 
 ### API-1 Historical summary
 GET {{baseUrl}}/summary?period=202606
@@ -13,6 +27,15 @@ GET {{baseUrl}}/summary?period=202606
 # sortBy=score|relativeGap|cumChange, topN=100
 # Response: { "period", "comparisonPeriods", "data": { "items": [...] } }
 GET {{baseUrl}}/anomaly/regions?catLevel=MAJOR&sortBy=score&topN=10
+> {%
+  client.test("API-2 anomaly region contract", function () {
+    client.assert(response.status === 200, "Expected HTTP 200");
+    client.assert(response.body.period === "202606", "Expected latest analyzed period");
+    client.assert(response.body.data.items.length === 10, "Expected top ten items");
+    client.assert(response.body.data.items[0].dongName === "판암1동", "Expected reference region");
+    client.assert(response.body.data.items[0].catName === "과학·기술", "Expected reference category");
+  });
+%}
 
 ### API-2 Category map query (includes LOW rows without fabricated score/grade)
 GET {{baseUrl}}/anomaly/regions?catCode=M1&catLevel=MAJOR&sortBy=score&topN=100
@@ -27,10 +50,25 @@ GET {{baseUrl}}/anomaly/regions?sortBy=unknown
 # Response items contain dongCode, dongName, sigungu, pctScore, rawScore, grade,
 # anomalyCatCount, validCatCount. The latest completed analysis period is used by default.
 GET {{baseUrl}}/regions/scores
+> {%
+  client.test("API-2b region score contract", function () {
+    client.assert(response.status === 200, "Expected HTTP 200");
+    client.assert(response.body.data.items.length === 82, "Expected all 82 dongs");
+    client.assert(response.body.data.items[0].pctScore === 100.000, "Expected top percentile");
+  });
+%}
 
 ### API-3 Region detail
 # Response data: { "header", "topAnomalies", "majorRelativeGaps", "excluded", "trend" }
 GET {{baseUrl}}/regions/30110551
+> {%
+  client.test("API-3 region detail contract", function () {
+    client.assert(response.status === 200, "Expected HTTP 200");
+    client.assert(response.body.data.header.dongName === "판암1동", "Expected Panam 1-dong");
+    client.assert(response.body.data.topAnomalies[0].catName === "과학·기술", "Expected top anomaly");
+    client.assert(response.body.data.topAnomalies[0].storeCounts[2].count === 12, "Expected reference count");
+  });
+%}
 
 ### API-3 Mok-dong reference case
 GET {{baseUrl}}/regions/30140550?period=202606
@@ -39,6 +77,14 @@ GET {{baseUrl}}/regions/30140550?period=202606
 # dongA and dongB are required. catCode is optional.
 # Response data: { "regionA", "regionB", "comparison" }
 GET {{baseUrl}}/regions/compare?dongA=30140550&dongB=30200540
+> {%
+  client.test("API-4 region comparison contract", function () {
+    client.assert(response.status === 200, "Expected HTTP 200");
+    client.assert(response.body.data.regionA.dongName === "목동", "Expected Mok-dong");
+    client.assert(response.body.data.regionB.dongName === "온천2동", "Expected Oncheon 2-dong");
+    client.assert(response.body.data.comparison.higherPriorityDongCode === "30140550", "Expected higher priority region");
+  });
+%}
 
 ### API-4 Compare Mok-dong and Oncheon 2-dong by food category
 GET {{baseUrl}}/regions/compare?dongA=30140550&dongB=30200540&catCode=I2&period=202606
@@ -47,6 +93,14 @@ GET {{baseUrl}}/regions/compare?dongA=30140550&dongB=30200540&catCode=I2&period=
 # scope=city|dong. dongCode is required when scope=dong.
 # periodRange format: startYYYYMM,endYYYYMM. Default: latest three analysis periods.
 GET {{baseUrl}}/categories/I2/trend?scope=city
+> {%
+  client.test("API-5 category trend contract", function () {
+    client.assert(response.status === 200, "Expected HTTP 200");
+    client.assert(response.body.data.scope === "city", "Expected city scope");
+    client.assert(response.body.data.catName === "음식", "Expected food category");
+    client.assert(response.body.data.series.length === 3, "Expected three trend points");
+  });
+%}
 
 ### API-5 Mok-dong food trend
 GET {{baseUrl}}/categories/I2/trend?scope=dong&dongCode=30140550&periodRange=202512,202606
@@ -55,6 +109,15 @@ GET {{baseUrl}}/categories/I2/trend?scope=dong&dongCode=30140550&periodRange=202
 # periodMonth is optional; the latest available month is used by default.
 # Response data: { "periodMonth", "metrics", "quarterlySeries" }
 GET {{baseUrl}}/bsi
+> {%
+  client.test("API-6 BSI contract", function () {
+    client.assert(response.status === 200, "Expected HTTP 200");
+    client.assert(response.body.period === "202606", "Expected analysis period");
+    client.assert(response.body.data.periodMonth === "2026-05", "Expected latest confirmed month");
+    client.assert(response.body.data.metrics["대전체감"] === 63.60, "Expected Daejeon sentiment");
+    client.assert(response.body.data.quarterlySeries.length === 3, "Expected three quarterly points");
+  });
+%}
 
 ### API-6 Historical BSI context
 GET {{baseUrl}}/bsi?periodMonth=2026-04
