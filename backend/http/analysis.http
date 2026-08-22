@@ -1,5 +1,39 @@
-### 이상징후 지역 조회
-GET http://localhost:8080/api/anomaly/regions?catLevel=MAJOR&topN=10
+@baseUrl = http://localhost:8080/api
 
-### 행정동 상세
-GET http://localhost:8080/api/regions/30230560
+### API-1 Main summary
+# Response: { "period", "comparisonPeriods", "data": { "analyzedDongCount",
+# "gradeCounts", "cityStoreGrowthRate", "latestBsi", "topRegions" } }
+GET {{baseUrl}}/summary
+
+### API-1 Historical summary
+GET {{baseUrl}}/summary?period=202606
+
+### API-2 Anomaly regions
+# Parameters: period?, catCode?, catLevel=MAJOR, grade?, consecutiveDecline?,
+# sortBy=score|relativeGap|cumChange, topN=100
+# Response: { "period", "comparisonPeriods", "data": { "items": [...] } }
+GET {{baseUrl}}/anomaly/regions?catLevel=MAJOR&sortBy=score&topN=10
+
+### API-2b Dong composite scores
+# Response items contain dongCode, dongName, sigungu, pctScore, rawScore, grade,
+# anomalyCatCount, validCatCount. The latest completed analysis period is used by default.
+GET {{baseUrl}}/regions/scores
+
+### API-3 Region detail
+# Response data: { "header", "topAnomalies", "majorRelativeGaps", "excluded", "trend" }
+GET {{baseUrl}}/regions/30110551
+
+### API-4 Compare regions
+# dongA and dongB are required. catCode is optional.
+GET {{baseUrl}}/regions/compare?dongA=30110551&dongB=30140550
+
+### API-5 Category trend
+# scope=city|dong. dongCode is required when scope=dong.
+GET {{baseUrl}}/categories/I2/trend?scope=city
+
+### API-6 BSI context
+# periodMonth is optional; the latest available month is used by default.
+GET {{baseUrl}}/bsi
+
+### Invalid period example: expected 400
+GET {{baseUrl}}/summary?period=202601

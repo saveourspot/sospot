@@ -11,6 +11,8 @@ public interface DongScoreRepository extends JpaRepository<DongScore, DongScoreI
 
   List<DongScore> findByPeriodIdOrderByPctScoreDesc(String periodId);
 
+  boolean existsByPeriodId(String periodId);
+
   Optional<DongScore> findByDongCodeAndPeriodId(String dongCode, String periodId);
 
   @Query("select max(score.periodId) from DongScore score")
