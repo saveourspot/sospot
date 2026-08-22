@@ -32,6 +32,9 @@ GET {{baseUrl}}/regions/scores
 # Response data: { "header", "topAnomalies", "majorRelativeGaps", "excluded", "trend" }
 GET {{baseUrl}}/regions/30110551
 
+### API-3 Mok-dong reference case
+GET {{baseUrl}}/regions/30140550?period=202606
+
 ### API-4 Compare regions
 # dongA and dongB are required. catCode is optional.
 GET {{baseUrl}}/regions/compare?dongA=30110551&dongB=30140550

@@ -14,6 +14,7 @@ import org.example.sospot.repository.StoreCountRepository;
 import org.example.sospot.service.RegionScoreService;
 import org.example.sospot.service.SummaryService;
 import org.example.sospot.service.AnomalyRegionService;
+import org.example.sospot.service.RegionDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -30,6 +31,7 @@ class SospotApplicationTests {
   @Autowired private SummaryService summaryService;
   @Autowired private RegionScoreService regionScoreService;
   @Autowired private AnomalyRegionService anomalyRegionService;
+  @Autowired private RegionDetailService regionDetailService;
 
   @Test
   void contextLoads() {
@@ -97,6 +99,36 @@ class SospotApplicationTests {
                     null, null, "MAJOR", null, null, "unknown", 10))
         .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
         .hasMessageContaining("400 BAD_REQUEST");
+  }
+
+  @Test
+  void regionDetailMatchesPanamAndMokdongReferenceCases() {
+    var panam = regionDetailService.getDetail("30110551", null);
+
+    assertThat(panam.period()).isEqualTo("202606");
+    assertThat(panam.data().header().dongName()).isEqualTo("판암1동");
+    assertThat(panam.data().header().totalDongCount()).isEqualTo(82);
+    assertThat(panam.data().topAnomalies().get(0).catName()).isEqualTo("과학·기술");
+    assertThat(panam.data().topAnomalies().get(0).storeCounts())
+        .extracting(point -> point.count())
+        .containsExactly(20, 18, 12);
+
+    var mokdong = regionDetailService.getDetail("30140550", "202606");
+    assertThat(mokdong.data().header().rank()).isEqualTo(1);
+    assertThat(mokdong.data().topAnomalies().get(0).catName()).isEqualTo("음식");
+    assertThat(mokdong.data().topAnomalies().get(0).storeCounts())
+        .extracting(point -> point.count())
+        .containsExactly(123, 121, 117);
+    assertThat(mokdong.data().topAnomalies().get(0).relativeGap())
+        .isEqualByComparingTo("-0.06307");
+    assertThat(mokdong.data().trend().series()).hasSize(3);
+  }
+
+  @Test
+  void regionDetailRejectsUnknownDong() {
+    assertThatThrownBy(() -> regionDetailService.getDetail("99999999", null))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("404 NOT_FOUND");
   }
 
 }
