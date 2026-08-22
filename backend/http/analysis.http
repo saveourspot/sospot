@@ -37,11 +37,19 @@ GET {{baseUrl}}/regions/30140550?period=202606
 
 ### API-4 Compare regions
 # dongA and dongB are required. catCode is optional.
-GET {{baseUrl}}/regions/compare?dongA=30110551&dongB=30140550
+# Response data: { "regionA", "regionB", "comparison" }
+GET {{baseUrl}}/regions/compare?dongA=30140550&dongB=30200540
+
+### API-4 Compare Mok-dong and Oncheon 2-dong by food category
+GET {{baseUrl}}/regions/compare?dongA=30140550&dongB=30200540&catCode=I2&period=202606
 
 ### API-5 Category trend
 # scope=city|dong. dongCode is required when scope=dong.
+# periodRange format: startYYYYMM,endYYYYMM. Default: latest three analysis periods.
 GET {{baseUrl}}/categories/I2/trend?scope=city
+
+### API-5 Mok-dong food trend
+GET {{baseUrl}}/categories/I2/trend?scope=dong&dongCode=30140550&periodRange=202512,202606
 
 ### API-6 BSI context
 # periodMonth is optional; the latest available month is used by default.

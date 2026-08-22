@@ -14,7 +14,9 @@ import org.example.sospot.repository.StoreCountRepository;
 import org.example.sospot.service.RegionScoreService;
 import org.example.sospot.service.SummaryService;
 import org.example.sospot.service.AnomalyRegionService;
+import org.example.sospot.service.CategoryTrendService;
 import org.example.sospot.service.RegionDetailService;
+import org.example.sospot.service.RegionComparisonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -31,7 +33,9 @@ class SospotApplicationTests {
   @Autowired private SummaryService summaryService;
   @Autowired private RegionScoreService regionScoreService;
   @Autowired private AnomalyRegionService anomalyRegionService;
+  @Autowired private CategoryTrendService categoryTrendService;
   @Autowired private RegionDetailService regionDetailService;
+  @Autowired private RegionComparisonService regionComparisonService;
 
   @Test
   void contextLoads() {
@@ -129,6 +133,68 @@ class SospotApplicationTests {
     assertThatThrownBy(() -> regionDetailService.getDetail("99999999", null))
         .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
         .hasMessageContaining("404 NOT_FOUND");
+  }
+
+  @Test
+  void regionComparisonSupportsAllCategoriesAndCategoryFilter() {
+    var all = regionComparisonService.compare("30140550", "30200540", null, null);
+
+    assertThat(all.period()).isEqualTo("202606");
+    assertThat(all.data().regionA().dongName()).isEqualTo("목동");
+    assertThat(all.data().regionB().dongName()).isEqualTo("온천2동");
+    assertThat(all.data().regionA().categories()).hasSize(10);
+    assertThat(all.data().regionB().categories()).hasSize(10);
+    assertThat(all.data().comparison().categories()).hasSize(10);
+
+    var food = regionComparisonService.compare("30140550", "30200540", "202606", "I2");
+    assertThat(food.data().regionA().categories()).singleElement()
+        .satisfies(metric -> {
+          assertThat(metric.catName()).isEqualTo("음식");
+          assertThat(metric.storeCounts()).extracting(point -> point.count())
+              .containsExactly(123, 121, 117);
+          assertThat(metric.relativeGap()).isEqualByComparingTo("-0.06307");
+        });
+    assertThat(food.data().comparison().categories()).hasSize(1);
+  }
+
+  @Test
+  void regionComparisonRejectsSameDongAndUnknownCategory() {
+    assertThatThrownBy(
+            () -> regionComparisonService.compare("30140550", "30140550", null, null))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("400 BAD_REQUEST");
+    assertThatThrownBy(
+            () -> regionComparisonService.compare("30140550", "30200540", null, "UNKNOWN"))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("400 BAD_REQUEST");
+  }
+
+  @Test
+  void categoryTrendSupportsCityAndDongScopes() {
+    var city = categoryTrendService.getTrend("I2", "city", null, null);
+
+    assertThat(city.period()).isEqualTo("202606");
+    assertThat(city.comparisonPeriods()).containsExactly("202512", "202603", "202606");
+    assertThat(city.data().catName()).isEqualTo("음식");
+    assertThat(city.data().series()).hasSize(3);
+    assertThat(city.data().series().get(2).growthRate()).isEqualByComparingTo("0.03001512");
+
+    var mokdong =
+        categoryTrendService.getTrend("I2", "dong", "30140550", "202512,202606");
+    assertThat(mokdong.data().dongCode()).isEqualTo("30140550");
+    assertThat(mokdong.data().series()).extracting(point -> point.storeCount())
+        .containsExactly(123, 121, 117);
+    assertThat(mokdong.data().series().get(2).growthRate()).isEqualByComparingTo("-0.03305785");
+  }
+
+  @Test
+  void categoryTrendRejectsInvalidScopeAndMissingDong() {
+    assertThatThrownBy(() -> categoryTrendService.getTrend("I2", "region", null, null))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("400 BAD_REQUEST");
+    assertThatThrownBy(() -> categoryTrendService.getTrend("I2", "dong", null, null))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("400 BAD_REQUEST");
   }
 
 }
