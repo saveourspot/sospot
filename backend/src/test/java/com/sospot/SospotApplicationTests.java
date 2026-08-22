@@ -14,6 +14,7 @@ import org.example.sospot.repository.StoreCountRepository;
 import org.example.sospot.service.RegionScoreService;
 import org.example.sospot.service.SummaryService;
 import org.example.sospot.service.AnomalyRegionService;
+import org.example.sospot.service.BsiService;
 import org.example.sospot.service.CategoryTrendService;
 import org.example.sospot.service.RegionDetailService;
 import org.example.sospot.service.RegionComparisonService;
@@ -33,6 +34,7 @@ class SospotApplicationTests {
   @Autowired private SummaryService summaryService;
   @Autowired private RegionScoreService regionScoreService;
   @Autowired private AnomalyRegionService anomalyRegionService;
+  @Autowired private BsiService bsiService;
   @Autowired private CategoryTrendService categoryTrendService;
   @Autowired private RegionDetailService regionDetailService;
   @Autowired private RegionComparisonService regionComparisonService;
@@ -193,6 +195,38 @@ class SospotApplicationTests {
         .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
         .hasMessageContaining("400 BAD_REQUEST");
     assertThatThrownBy(() -> categoryTrendService.getTrend("I2", "dong", null, null))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("400 BAD_REQUEST");
+  }
+
+  @Test
+  void bsiReturnsLatestMonthlyContextAndQuarterlyDaejeonSeries() {
+    var latest = bsiService.getBsi(null);
+
+    assertThat(latest.period()).isEqualTo("202606");
+    assertThat(latest.data().periodMonth()).isEqualTo("2026-05");
+    assertThat(latest.data().metrics().overallSentiment()).isEqualByComparingTo("67.90");
+    assertThat(latest.data().metrics().daejeonSentiment()).isEqualByComparingTo("63.60");
+    assertThat(latest.data().metrics().industrySentiment())
+        .containsEntry("음식점업체감", new java.math.BigDecimal("68.00"))
+        .hasSize(9);
+    assertThat(latest.data().quarterlySeries()).extracting(point -> point.value())
+        .containsExactly(
+            new java.math.BigDecimal("72.67"),
+            new java.math.BigDecimal("65.20"),
+            new java.math.BigDecimal("60.00"));
+
+    var april = bsiService.getBsi("2026-04");
+    assertThat(april.data().metrics().overallSentiment()).isEqualByComparingTo("63.70");
+    assertThat(april.data().metrics().daejeonSentiment()).isEqualByComparingTo("56.40");
+  }
+
+  @Test
+  void bsiRejectsInvalidOrFutureMonth() {
+    assertThatThrownBy(() -> bsiService.getBsi("202605"))
+        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+        .hasMessageContaining("400 BAD_REQUEST");
+    assertThatThrownBy(() -> bsiService.getBsi("2026-07"))
         .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
         .hasMessageContaining("400 BAD_REQUEST");
   }

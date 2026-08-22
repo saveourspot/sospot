@@ -11,6 +11,8 @@ public interface BsiRepository extends JpaRepository<Bsi, BsiId> {
 
   List<Bsi> findByPeriodMonthOrderByMetricNameAsc(String periodMonth);
 
+  List<Bsi> findByMetricNameAndValueIsNotNullOrderByPeriodMonthAsc(String metricName);
+
   Optional<Bsi> findFirstByMetricNameAndValueIsNotNullAndPeriodMonthLessThanEqualOrderByPeriodMonthDesc(
       String metricName, String periodMonth);
 

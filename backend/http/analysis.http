@@ -53,7 +53,11 @@ GET {{baseUrl}}/categories/I2/trend?scope=dong&dongCode=30140550&periodRange=202
 
 ### API-6 BSI context
 # periodMonth is optional; the latest available month is used by default.
+# Response data: { "periodMonth", "metrics", "quarterlySeries" }
 GET {{baseUrl}}/bsi
+
+### API-6 Historical BSI context
+GET {{baseUrl}}/bsi?periodMonth=2026-04
 
 ### Invalid period example: expected 400
 GET {{baseUrl}}/summary?period=202601
