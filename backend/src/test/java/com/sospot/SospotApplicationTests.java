@@ -10,6 +10,8 @@ import org.example.sospot.repository.DongRepository;
 import org.example.sospot.repository.DongScoreRepository;
 import org.example.sospot.repository.PeriodRepository;
 import org.example.sospot.repository.StoreCountRepository;
+import org.example.sospot.service.RegionScoreService;
+import org.example.sospot.service.SummaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -23,6 +25,8 @@ class SospotApplicationTests {
   @Autowired private AnomalyRepository anomalyRepository;
   @Autowired private DongScoreRepository dongScoreRepository;
   @Autowired private BsiRepository bsiRepository;
+  @Autowired private SummaryService summaryService;
+  @Autowired private RegionScoreService regionScoreService;
 
   @Test
   void contextLoads() {
@@ -34,6 +38,33 @@ class SospotApplicationTests {
     assertThat(dongScoreRepository.findLatestAnalyzedPeriodId()).contains("202606");
     assertThat(dongScoreRepository.findByPeriodIdOrderByPctScoreDesc("202606")).hasSize(82);
     assertThat(bsiRepository.count()).isPositive();
+  }
+
+  @Test
+  void summaryUsesLatestCompletedAnalysisPeriod() {
+    var response = summaryService.getSummary(null);
+
+    assertThat(response.period()).isEqualTo("202606");
+    assertThat(response.comparisonPeriods()).containsExactly("202512", "202603", "202606");
+    assertThat(response.data().analyzedDongCount()).isEqualTo(82);
+    assertThat(response.data().gradeCounts())
+        .containsEntry("중점검토", 9L)
+        .containsEntry("주의", 16L)
+        .containsEntry("관심", 25L)
+        .containsEntry("정상", 32L);
+    assertThat(response.data().cityStoreGrowthRate()).isEqualByComparingTo("0.02667701");
+    assertThat(response.data().latestBsi().periodMonth()).isEqualTo("2026-05");
+    assertThat(response.data().latestBsi().value()).isEqualByComparingTo("63.60");
+    assertThat(response.data().topRegions()).hasSize(5);
+  }
+
+  @Test
+  void regionScoresReturnsAllDongsOrderedByPercentile() {
+    var response = regionScoreService.getScores(null);
+
+    assertThat(response.period()).isEqualTo("202606");
+    assertThat(response.data().items()).hasSize(82);
+    assertThat(response.data().items().get(0).pctScore()).isEqualByComparingTo("100.000");
   }
 
 }
