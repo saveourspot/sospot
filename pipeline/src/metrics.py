@@ -55,6 +55,22 @@ FACT_ANOMALY_COLUMNS = (
     "grade",
 )
 
+DONG_GRADE_THRESHOLDS = (
+    (90.0, "중점검토"),
+    (70.0, "주의"),
+    (40.0, "관심"),
+)
+
+FACT_DONG_SCORE_COLUMNS = (
+    "dong_code",
+    "period_id",
+    "raw_score",
+    "pct_score",
+    "grade",
+    "anomaly_cat_count",
+    "valid_cat_count",
+)
+
 
 def load_fact_store_count(engine: Engine | None = None) -> pd.DataFrame:
     """Read the entire fact_store_count table into a DataFrame."""
@@ -274,6 +290,85 @@ def load_fact_anomaly(
         )
 
 
+def compute_dong_scores(scored: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate valid MAJOR-category scores into one composite score per dong."""
+    major = scored[scored["cat_level"] == "MAJOR"]
+    periods = major["period_id"].drop_duplicates().tolist()
+    if len(periods) != 1:
+        raise ValueError("Dong scores must be computed for exactly one target period")
+
+    valid = major[
+        (major["sample_size_flag"] == "OK") & major["score"].notna()
+    ].copy()
+    if valid.empty:
+        return pd.DataFrame(columns=FACT_DONG_SCORE_COLUMNS)
+
+    counts = valid.groupby("dong_code").agg(
+        valid_cat_count=("cat_code", "count"),
+        anomaly_cat_count=("score", lambda values: int((values >= 50.0).sum())),
+    )
+    top_average = (
+        valid.sort_values(
+            ["dong_code", "score"], ascending=[True, False], kind="stable"
+        )
+        .groupby("dong_code")
+        .head(3)
+        .groupby("dong_code")["score"]
+        .mean()
+        .rename("top_average")
+    )
+
+    dong_scores = counts.join(top_average).reset_index()
+    weight = np.minimum(1.0, 0.6 + 0.1 * dong_scores["anomaly_cat_count"])
+    dong_scores["raw_score"] = dong_scores["top_average"] * weight
+    dong_scores["pct_score"] = dong_scores["raw_score"].rank(pct=True) * 100
+    dong_scores["grade"] = dong_scores["pct_score"].map(_grade_for_dong_pct)
+    dong_scores["period_id"] = periods[0]
+
+    dong_scores[["valid_cat_count", "anomaly_cat_count"]] = dong_scores[
+        ["valid_cat_count", "anomaly_cat_count"]
+    ].astype(int)
+    return dong_scores.loc[:, list(FACT_DONG_SCORE_COLUMNS)]
+
+
+def _grade_for_dong_pct(pct_score: float) -> str | None:
+    if pd.isna(pct_score):
+        return None
+    for threshold, grade in DONG_GRADE_THRESHOLDS:
+        if pct_score >= threshold:
+            return grade
+    return GRADE_DEFAULT
+
+
+def load_fact_dong_score(
+    dong_scores: pd.DataFrame,
+    engine: Engine | None = None,
+) -> None:
+    """Upsert dong composite scores so period snapshots are preserved on re-runs."""
+    target_engine = engine or get_engine()
+    table = Table("fact_dong_score", MetaData(), autoload_with=target_engine)
+    payload = dong_scores.loc[:, list(FACT_DONG_SCORE_COLUMNS)]
+    records = (
+        payload.astype(object).where(pd.notna(payload), None).to_dict(orient="records")
+    )
+    if not records:
+        return
+
+    statement = insert(table).values(records)
+    update_columns = {
+        column: statement.excluded[column]
+        for column in FACT_DONG_SCORE_COLUMNS
+        if column not in ("dong_code", "period_id")
+    }
+    with target_engine.begin() as connection:
+        connection.execute(
+            statement.on_conflict_do_update(
+                index_elements=["dong_code", "period_id"],
+                set_=update_columns,
+            )
+        )
+
+
 def main() -> None:
     counts = load_fact_store_count()
     analyzable = determine_analyzable_periods(counts)
@@ -286,6 +381,8 @@ def main() -> None:
         metrics = compute_combination_metrics(counts, target_period)
         scored = compute_scores(metrics)
         load_fact_anomaly(scored, engine=engine)
+        dong_scores = compute_dong_scores(scored)
+        load_fact_dong_score(dong_scores, engine=engine)
 
         for cat_level in ("MAJOR", "MIDDLE"):
             level_frame = scored[scored["cat_level"] == cat_level]
@@ -306,6 +403,16 @@ def main() -> None:
                 f"{target_period} {cat_level}: total {total} · OK {ok} · LOW {low} "
                 f"| {grade_str}"
             )
+
+        dong_grade_counts = dong_scores["grade"].value_counts().to_dict()
+        dong_grade_str = " · ".join(
+            f"{grade} {dong_grade_counts.get(grade, 0)}"
+            for _, grade in DONG_GRADE_THRESHOLDS
+        )
+        dong_grade_str += (
+            f" · {GRADE_DEFAULT} {dong_grade_counts.get(GRADE_DEFAULT, 0)}"
+        )
+        print(f"{target_period} DONG: total {len(dong_scores)} | {dong_grade_str}")
 
 
 if __name__ == "__main__":

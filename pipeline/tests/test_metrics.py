@@ -7,8 +7,10 @@ import numpy as np
 import pandas as pd
 
 from pipeline.src.metrics import (
+    _grade_for_dong_pct,
     _grade_for_score,
     compute_combination_metrics,
+    compute_dong_scores,
     compute_scores,
     determine_analyzable_periods,
 )
@@ -275,6 +277,84 @@ class ComputeScoresTest(unittest.TestCase):
 
         self.assertTrue(math.isnan(nan_row["score"]))
         self.assertIsNone(nan_row["grade"])
+
+
+class ComputeDongScoresTest(unittest.TestCase):
+    def test_uses_valid_major_top_three_and_anomaly_weight(self) -> None:
+        rows = []
+        for cat, score in (("A", 90.0), ("B", 70.0), ("C", 50.0), ("D", 10.0)):
+            row = _make_metrics_row(
+                "D01",
+                cat,
+                growth=0.0,
+                city_growth=0.0,
+                cum=0.0,
+                consecutive=False,
+            )
+            row.update(score=score, grade="정상")
+            rows.append(row)
+
+        low = _make_metrics_row(
+            "D01",
+            "LOW",
+            growth=-1.0,
+            city_growth=0.0,
+            cum=-1.0,
+            consecutive=True,
+            flag="LOW",
+        )
+        low.update(score=100.0, grade="중점검토")
+        rows.append(low)
+
+        middle = _make_metrics_row(
+            "D01",
+            "MID",
+            cat_level="MIDDLE",
+            growth=-1.0,
+            city_growth=0.0,
+            cum=-1.0,
+            consecutive=True,
+        )
+        middle.update(score=100.0, grade="중점검토")
+        rows.append(middle)
+
+        result = compute_dong_scores(pd.DataFrame(rows))
+        row = result.iloc[0]
+
+        self.assertEqual(row["valid_cat_count"], 4)
+        self.assertEqual(row["anomaly_cat_count"], 3)
+        self.assertAlmostEqual(row["raw_score"], 70.0 * 0.9, places=6)
+        self.assertEqual(row["pct_score"], 100.0)
+        self.assertEqual(row["grade"], "중점검토")
+
+    def test_percentile_and_grade_are_based_on_all_dong_raw_scores(self) -> None:
+        rows = []
+        for dong, score in (("D01", 10.0), ("D02", 20.0), ("D03", 30.0), ("D04", 40.0)):
+            row = _make_metrics_row(
+                dong,
+                "A",
+                growth=0.0,
+                city_growth=0.0,
+                cum=0.0,
+                consecutive=False,
+            )
+            row.update(score=score, grade="정상")
+            rows.append(row)
+
+        result = compute_dong_scores(pd.DataFrame(rows)).set_index("dong_code")
+
+        self.assertEqual(result.loc["D01", "pct_score"], 25.0)
+        self.assertEqual(result.loc["D01", "grade"], "정상")
+        self.assertEqual(result.loc["D02", "grade"], "관심")
+        self.assertEqual(result.loc["D03", "grade"], "주의")
+        self.assertEqual(result.loc["D04", "grade"], "중점검토")
+
+    def test_dong_grade_boundaries_are_inclusive(self) -> None:
+        self.assertEqual(_grade_for_dong_pct(90.0), "중점검토")
+        self.assertEqual(_grade_for_dong_pct(70.0), "주의")
+        self.assertEqual(_grade_for_dong_pct(40.0), "관심")
+        self.assertEqual(_grade_for_dong_pct(39.999), "정상")
+        self.assertIsNone(_grade_for_dong_pct(float("nan")))
 
 
 if __name__ == "__main__":

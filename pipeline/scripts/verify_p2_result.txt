@@ -1,0 +1,46 @@
+SOSpot P2 validation result
+===========================
+
+Status: PASS
+
+Validation source
+- Recomputed from the three local raw shop CSV files and loaded into PostgreSQL
+- target period: 202606
+
+Store totals (MAJOR)
+- 202512: 78,246
+- 202603: 78,607
+- 202606: 80,704
+
+Category anomaly (MAJOR, sample_size_flag=OK)
+- valid combinations: 604
+- 중점검토: 32
+- 주의: 71
+- 관심: 119
+- 정상: 382
+
+Dong composite score
+- dongs: 82
+- 중점검토: 9
+- 주의: 16
+- 관심: 25
+- 정상: 32
+
+Representative case
+- 판암1동(30110551) 과학·기술(M1): combination rank 1
+- store count: 20 -> 18 -> 12
+- local growth rate: -33.3333%
+- city growth rate: +8.2286%
+- relative gap: -41.5619%p
+- cumulative change: -40.0000%
+- score: 100.000
+
+Automated tests
+- pipeline unit tests: 29 passed
+
+Database integrity
+- fact_anomaly rows: 5,817
+- fact_dong_score rows: 82
+- duplicate fact_anomaly keys: 0
+- duplicate fact_dong_score keys: 0
+- repeated metrics load: passed with unchanged counts and distributions
