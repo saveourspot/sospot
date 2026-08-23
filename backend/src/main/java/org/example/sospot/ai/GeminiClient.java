@@ -24,6 +24,10 @@ public class GeminiClient {
     }
 
     public JsonNode generate(String systemPrompt, List<Map<String, Object>> conversation, List<Map<String, Object>> toolSchemas) {
+        if (properties.apiKey() == null || properties.apiKey().isBlank()) {
+            throw new IllegalStateException("Gemini API 키가 설정되지 않았습니다.");
+        }
+
         Map<String, Object> body = Map.of(
             "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))),
             "contents", conversation,

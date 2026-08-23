@@ -11,7 +11,7 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "llm.google")
 @Validated
 public record LlmProperties(
-    @NotBlank String apiKey,
+    String apiKey,
     @NotBlank String model,
     @NotBlank String baseUrl,
     @NotNull Duration timeout,

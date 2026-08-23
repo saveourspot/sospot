@@ -1,6 +1,7 @@
 package org.example.sospot.ai;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import org.example.sospot.ai.dto.AiChatRequest;
 import org.example.sospot.ai.dto.AiChatResponse;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +20,10 @@ public class AiChatController {
     }
 
     @PostMapping("/chat")
-    public AiChatResponse chat(@Valid @RequestBody AiChatRequest request) {
-        return chatService.chat(request.question());
+    public AiChatResponse chat(
+        @Valid @RequestBody AiChatRequest request,
+        HttpServletRequest servletRequest
+    ) {
+        return chatService.chat(request.question(), servletRequest.getRemoteAddr());
     }
 }

@@ -374,6 +374,12 @@ a {
   align-self: end;
 }
 
+.ai-prompt__privacy-notice {
+  margin: 8px 2px 0;
+  color: #bcd2ca;
+  font-size: 0.72rem;
+}
+
 .ai-prompt__input-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -448,6 +454,168 @@ a {
 
 .ai-prompt__recommendations button:hover {
   background: rgb(255 255 255 / 16%);
+}
+
+.ai-prompt__recommendations button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ai-prompt__response {
+  grid-column: 2;
+  min-height: 0;
+}
+
+.ai-prompt__status,
+.ai-prompt__error {
+  margin: 0;
+  border-radius: 12px;
+  padding: 13px 15px;
+  font-size: 0.86rem;
+}
+
+.ai-prompt__status {
+  color: #d9eee6;
+  background: rgb(255 255 255 / 9%);
+}
+
+.ai-prompt__error {
+  color: #ffe8e3;
+  background: rgb(139 42 28 / 42%);
+}
+
+.ai-answer {
+  border-radius: 16px;
+  padding: 20px;
+  color: #18342a;
+  background: #f7fcfa;
+}
+
+.ai-answer__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-answer__heading span {
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #166044;
+  background: #dcefe7;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.ai-answer__content {
+  margin-top: 16px;
+  line-height: 1.7;
+}
+
+.ai-answer__content > :first-child {
+  margin-top: 0;
+}
+
+.ai-answer__content > :last-child {
+  margin-bottom: 0;
+}
+
+.ai-answer__content h3,
+.ai-answer__content h4,
+.ai-answer__content h5 {
+  margin: 20px 0 8px;
+  color: #18342a;
+  font-size: 0.98rem;
+}
+
+.ai-answer__content p,
+.ai-answer__content ol,
+.ai-answer__content ul {
+  margin: 8px 0;
+}
+
+.ai-answer__content ol,
+.ai-answer__content ul {
+  padding-left: 24px;
+}
+
+.ai-answer__content li + li {
+  margin-top: 7px;
+}
+
+.ai-answer__content hr {
+  border: 0;
+  border-top: 1px solid #dbe8e2;
+  margin: 18px 0;
+}
+
+.ai-answer__content blockquote {
+  border-left: 3px solid #79ad99;
+  margin: 14px 0;
+  padding: 4px 0 4px 14px;
+  color: #4b6258;
+  background: #eef7f3;
+}
+
+.ai-answer__content blockquote p {
+  margin: 4px 10px 4px 0;
+}
+
+.ai-answer__content code {
+  border-radius: 4px;
+  padding: 1px 4px;
+  background: #e6f0ec;
+  font-size: 0.9em;
+}
+
+.ai-answer__evidence {
+  border-top: 1px solid #dbe8e2;
+  padding-top: 12px;
+  font-size: 0.8rem;
+}
+
+.ai-answer__evidence summary {
+  cursor: pointer;
+  color: #176b52;
+  font-weight: 750;
+}
+
+.ai-answer__evidence ul {
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.ai-answer__evidence li + li {
+  margin-top: 12px;
+}
+
+.ai-answer__evidence dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 6px 0 0;
+}
+
+.ai-answer__evidence dl div {
+  display: flex;
+  gap: 4px;
+}
+
+.ai-answer__evidence dt {
+  color: #63756d;
+}
+
+.ai-answer__evidence dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.ai-answer .ai-answer__notice {
+  margin-bottom: 0;
+  border-top: 1px solid #dbe8e2;
+  padding-top: 12px;
+  color: #5e6e67;
+  font-size: 0.76rem;
 }
 
 .sr-only {
@@ -1636,6 +1804,10 @@ a {
 
   .ai-prompt__intro {
     grid-row: auto;
+  }
+
+  .ai-prompt__response {
+    grid-column: 1;
   }
 
   .ai-prompt__input-row {

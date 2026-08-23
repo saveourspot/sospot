@@ -9,12 +9,19 @@ spring:
     open-in-view: false
     properties:
       hibernate.format_sql: true
+
+server:
+  port: ${SERVER_PORT:8080}
   flyway:
     enabled: true
     baseline-on-migrate: true
 
 llm:
-  cache-ttl-minutes: 60
+  usage:
+    per-ip-requests-per-minute: ${LLM_PER_IP_REQUESTS_PER_MINUTE:3}
+    daily-model-calls: ${LLM_DAILY_MODEL_CALLS:200}
+    cache-maximum-size: ${LLM_CACHE_MAXIMUM_SIZE:500}
+    cache-ttl: ${LLM_CACHE_TTL:60m}
   google:
     base-url: https://generativelanguage.googleapis.com/v1beta
     model: gemini-3.6-flash

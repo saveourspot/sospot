@@ -25,6 +25,7 @@ public class AiChatService {
     private final AiFallbackService fallbackService;
     private final ObjectMapper mapper;
     private final LlmProperties properties;
+    private final AiCostControlService costControlService;
 
     public AiChatService(
         GeminiClient geminiClient,
@@ -32,7 +33,8 @@ public class AiChatService {
         ToolRegistry toolRegistry,
         AiFallbackService fallbackService,
         ObjectMapper mapper,
-        LlmProperties properties
+        LlmProperties properties,
+        AiCostControlService costControlService
     ) {
         this.geminiClient = geminiClient;
         this.promptLoader = promptLoader;
@@ -40,11 +42,30 @@ public class AiChatService {
         this.fallbackService = fallbackService;
         this.mapper = mapper;
         this.properties = properties;
+        this.costControlService = costControlService;
     }
 
-    public AiChatResponse chat(String question) {
+    public AiChatResponse chat(String question, String clientKey) {
+        AiChatResponse cached = costControlService.getCached(question);
+        if (cached != null) {
+            return cached;
+        }
+        if (!costControlService.allowQuestion(clientKey)) {
+            return fallbackService.answer(
+                question,
+                new IllegalStateException("IP별 분당 AI 요청 한도 초과")
+            );
+        }
+        if (properties.apiKey() == null || properties.apiKey().isBlank()) {
+            return fallbackService.answer(
+                question,
+                new IllegalStateException("Gemini API 키 미설정")
+            );
+        }
         try {
-            return chatWithLlm(question);
+            AiChatResponse response = chatWithLlm(question);
+            costControlService.cache(question, response);
+            return response;
         } catch (RuntimeException e) {
             log.warn("LLM 경로 실패, fallback으로 전환", e);
             return fallbackService.answer(question, e);
@@ -62,6 +83,9 @@ public class AiChatService {
         int maxHops = properties.maxToolHops();
 
         for (int hop = 0; hop <= maxHops; hop++) {
+            if (!costControlService.allowModelCall()) {
+                throw new IllegalStateException("일일 Gemini 모델 호출 한도 초과");
+            }
             JsonNode response = geminiClient.generate(promptLoader.prompt(), conversation, toolRegistry.schemas());
             JsonNode content = response.path("candidates").path(0).path("content");
             JsonNode parts = content.path("parts");

@@ -68,7 +68,7 @@ public class AiFallbackService {
                 java.util.Map.of("dongCode", region.dongCode()),
                 envelope
             ));
-            String text = renderRegionSummary(region, detail);
+            String text = renderRegionSummary(region, detail, envelope.period());
             return AiChatResponse.fallback(text, citations);
         } catch (RuntimeException e) {
             log.warn("Fallback 지역 상세 조회 실패: {}", e.getMessage());
@@ -94,11 +94,15 @@ public class AiFallbackService {
         }
     }
 
-    private String renderRegionSummary(AliasCatalog.RegionEntry region, RegionDetailResponse detail) {
+    private String renderRegionSummary(
+        AliasCatalog.RegionEntry region,
+        RegionDetailResponse detail,
+        String period
+    ) {
         var header = detail.header();
         StringBuilder sb = new StringBuilder();
         sb.append(region.sigungu()).append(" ").append(header.dongName())
-          .append("은(는) 기준 분기(2026.06) 등급 ")
+          .append("은(는) 기준 분기(").append(formatPeriod(period)).append(") 등급 ")
           .append(header.grade())
           .append(", 대전 82개 행정동 중 ")
           .append(header.rank())
@@ -116,6 +120,13 @@ public class AiFallbackService {
         sb.append("점포 수 감소가 반드시 폐업을 의미하는 것은 아닙니다.");
         sb.append(" (AI 응답 생성 실패로 결정론적 요약을 제공했습니다.)");
         return sb.toString();
+    }
+
+    private String formatPeriod(String period) {
+        if (period != null && period.matches("\\d{6}")) {
+            return period.substring(0, 4) + "." + period.substring(4, 6);
+        }
+        return period == null || period.isBlank() ? "확인되지 않음" : period;
     }
 
     private String renderCategorySummary(AliasCatalog.CategoryEntry category, org.example.sospot.dto.AnomalyRegionsResponse response) {

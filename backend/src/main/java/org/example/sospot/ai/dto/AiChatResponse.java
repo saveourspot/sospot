@@ -15,6 +15,6 @@ public record AiChatResponse(
     }
 
     public static AiChatResponse fallback(String answer, List<ToolCall> calls) {
-        return new AiChatResponse(answer, calls, "fallback", null);
+        return new AiChatResponse(answer, calls, "template", null);
     }
 }

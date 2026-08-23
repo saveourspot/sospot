@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:8080/api
+@baseUrl = http://localhost:8500/api
 
 # SOSpot analysis API contract
 # Every successful response uses: { "period", "comparisonPeriods", "data" }

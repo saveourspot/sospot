@@ -1,8 +1,8 @@
-# P4-00 AI Provider 검토 (팀 회의 안건)
+# P4-00 AI Provider 검토 및 결정
 
 > 작성: 민솔, 2026-08-23
 > 목적: P4-01 착수 전 **MVP 단일 provider** 확정. 복수 provider 추상화 금지 (조율이력 2차 합의).
-> 결정 기한: 8/25 P4 착수 전
+> 결정: 2026-08-24, **Google Gemini 3.6 Flash**
 > 결정 후 이 파일은 삭제하지 말고 근거 아카이브로 남긴다.
 
 ---
@@ -85,7 +85,29 @@
 
 ---
 
-## 3. 권고
+## 3. 최종 결정
+
+### 확정: **Google Gemini 3.6 Flash**
+
+초기 검토안은 Claude Haiku 4.5를 권고했지만, P4 구현이 Gemini REST API와
+Gemini function calling 스키마로 완료된 상태를 확인한 뒤 Gemini 3.6 Flash로 확정한다.
+
+결정 근거:
+
+1. 현재 `GeminiClient`, tool schema, 설정이 단일 provider 원칙에 맞게 이미 구현되어 있다.
+2. Google 공식 모델 문서에서 `gemini-3.6-flash`를 stable 모델로 제공하며 function calling을 지원한다.
+3. 공모전 데모에 필요한 낮은 지연과 다단계 도구 호출을 지원한다.
+4. 현재 구현을 유지하면 provider 교체에 따른 회귀 위험과 추가 검증 범위를 줄일 수 있다.
+
+공식 확인:
+
+- 모델: https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash
+- Function calling: https://ai.google.dev/gemini-api/docs/function-calling
+- 가격: https://ai.google.dev/gemini-api/docs/pricing
+
+---
+
+## 4. 과거 권고안
 
 ### 1순위: **Anthropic Claude Haiku 4.5**
 
@@ -108,7 +130,7 @@ Claude 이용 불가 상황(예: 팀 API 크레딧 소진) 시 즉시 스위치 
 
 ---
 
-## 4. 결정 후 후속 조치
+## 5. 결정 후 후속 조치
 
 - **API Key 관리**: `application-local.yml`에만 저장, 커밋 금지. 예시는 `application-local.yml.example`에 placeholder
 - **P4-01**: WebClient + Caffeine + 선정된 provider 엔드포인트로 세팅
@@ -117,9 +139,9 @@ Claude 이용 불가 상황(예: 팀 API 크레딧 소진) 시 즉시 스위치 
 
 ---
 
-## 5. 회의에서 결정할 것
+## 6. 결정 사항
 
-- [ ] Provider 확정 (권고: Claude Haiku 4.5)
+- [x] Provider 확정: Google Gemini 3.6 Flash
 - [ ] API Key 발급 담당·저장 위치
-- [ ] 모델명 확정 (Haiku vs Sonnet — 서술 품질 vs 비용/속도 tradeoff)
+- [x] 모델명 확정: `gemini-3.6-flash`
 - [ ] 캐시 TTL 확정 (`application.yml` 현재 60분)

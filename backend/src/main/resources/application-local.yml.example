@@ -8,3 +8,8 @@ spring:
 llm:
   google:
     api-key: your-google-ai-studio-api-key
+  usage:
+    per-ip-requests-per-minute: 3
+    daily-model-calls: 200
+    cache-maximum-size: 500
+    cache-ttl: 60m

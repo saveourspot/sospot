@@ -27,11 +27,11 @@ public class SearchAnomalyRegionsTool implements AiTool {
             "description",
                 "대전 행정동 × 업종 조합의 이상징후 목록을 검색합니다. "
                 + "특정 업종·등급·연속감소 조건에 맞는 상위 조합을 반환합니다. "
-                + "period를 지정하지 않으면 최신 분석 완료 분기(2026.06)를 사용합니다.",
+                + "period를 지정하지 않으면 최신 분석 완료 분기를 사용합니다.",
             "parameters", Map.of(
                 "type", "OBJECT",
                 "properties", Map.of(
-                    "period", Map.of("type", "STRING", "description", "YYYYMM 형식 분기, 예: 202606. 생략 시 최신."),
+                    "period", Map.of("type", "STRING", "description", "YYYYMM 형식 분기. 생략 시 최신."),
                     "catCode", Map.of("type", "STRING", "description", "업종 코드. 대분류 예: I2 음식, G2 소매. 중분류 예: I212 비알코올. 생략 시 전체 업종."),
                     "catLevel", Map.of("type", "STRING", "enum", List.of("MAJOR", "MIDDLE"), "description", "업종 레벨. 지도 기본은 MAJOR."),
                     "grade", Map.of("type", "STRING", "enum", List.of("중점검토", "주의", "관심", "정상"), "description", "등급 필터. 생략 시 전체."),

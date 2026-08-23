@@ -55,3 +55,8 @@ export async function getBsi(periodMonth) {
   })
   return response.data
 }
+
+export async function askAi(question) {
+  const response = await apiClient.post('/ai/chat', { question })
+  return response.data
+}
