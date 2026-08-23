@@ -43,14 +43,14 @@ function AnomalyCategoryCard({ rank, anomaly }) {
       <article className="anomaly-card anomaly-card--pending">
         <div className="anomaly-card__heading">
           <span>{rank}위</span>
-          <strong>분석 API 연동 대기</strong>
+          <strong>표시할 분석 결과 없음</strong>
         </div>
         <div className="anomaly-card__placeholder" aria-hidden="true">
           <span />
           <span />
           <span />
         </div>
-        <p>실제 저장된 업종별 분석 결과가 연결되면 표시됩니다.</p>
+        <p>이 업종의 유효한 분석 결과를 확인할 수 없습니다.</p>
       </article>
     )
   }

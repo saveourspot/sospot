@@ -18,7 +18,7 @@ function formatPercent(value) {
 
 function formatPeriodLabel(period, comparisonPeriods) {
   if (!period || comparisonPeriods.length === 0) {
-    return '검증 기준 데이터 · 실제 API 연동 예정'
+    return '분석 기준 시점을 확인할 수 없습니다.'
   }
 
   const year = period.slice(0, 4)

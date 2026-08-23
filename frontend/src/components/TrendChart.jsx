@@ -29,8 +29,8 @@ function TrendChart({ series = [], bsiPeriodLabel }) {
           <span />
           <span />
         </div>
-        <strong>추세 데이터 API 연동 대기</strong>
-        <p>실제 3분기 지역·대전 점포 수와 대전 체감 BSI가 연결되면 표시됩니다.</p>
+        <strong>표시할 추세 데이터 없음</strong>
+        <p>유효한 3분기 지역·대전 점포 수 흐름을 확인할 수 없습니다.</p>
       </div>
     )
   }

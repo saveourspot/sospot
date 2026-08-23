@@ -27,10 +27,9 @@ function RelativeGapChart({ categories = [] }) {
             <span key={width} style={{ width: `${width}%` }} />
           ))}
         </div>
-        <strong>업종별 상대격차 데이터 연동 대기</strong>
+        <strong>표시할 상대격차 데이터 없음</strong>
         <p>
-          상세 분석 API가 연결되면 대분류 10개 업종의 지역 변화와 대전 전체
-          변화 간 격차를 표시합니다.
+          표본 기준을 충족한 대분류 업종의 상대격차를 확인할 수 없습니다.
         </p>
       </div>
     )

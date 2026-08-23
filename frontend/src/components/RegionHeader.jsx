@@ -16,19 +16,19 @@ function RegionHeader({ header, periodLabel }) {
         {hasGrade ? (
           <GradeBadge grade={header.grade} />
         ) : (
-          <span className="pending-badge">등급 API 연동 대기</span>
+          <span className="pending-badge">등급 데이터 없음</span>
         )}
       </div>
 
       <dl className="region-header__metrics">
         <div>
           <dt>행정동 종합 percentile</dt>
-          <dd>{hasScore ? `${header.pctScore.toFixed(1)}점` : '연동 대기'}</dd>
+          <dd>{hasScore ? `${header.pctScore.toFixed(1)}점` : '데이터 없음'}</dd>
         </div>
         <div>
           <dt>대전 내 검토 순위</dt>
           <dd>
-            {hasRank ? `${header.rank}위 / ${header.totalDongCount}개 동` : '연동 대기'}
+            {hasRank ? `${header.rank}위 / ${header.totalDongCount}개 동` : '데이터 없음'}
           </dd>
         </div>
         <div>

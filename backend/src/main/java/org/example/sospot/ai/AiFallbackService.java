@@ -3,6 +3,7 @@ package org.example.sospot.ai;
 import org.example.sospot.ai.dto.AiChatResponse;
 import org.example.sospot.dto.ApiEnvelope;
 import org.example.sospot.dto.RegionDetailResponse;
+import org.example.sospot.service.AnalysisPeriodService;
 import org.example.sospot.service.AnomalyRegionService;
 import org.example.sospot.service.RegionDetailService;
 import org.slf4j.Logger;
@@ -13,6 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class AiFallbackService {
@@ -26,24 +30,78 @@ public class AiFallbackService {
         "질문에서 대전 82개 행정동 또는 지원 업종을 식별하지 못했습니다. "
         + "예: \"판암1동은 왜 중점검토야?\", \"음식 업종 중점검토 지역 보여줘\" 와 같이 지역명이나 업종을 명시해 주세요.";
 
+    private static final String OUTSIDE_DAEJEON =
+        "SOSpot은 대전광역시 82개 행정동만 분석합니다. 다른 지역 데이터는 제공하지 않습니다.";
+    private static final String UNSUPPORTED_PERIOD =
+        "요청한 시점의 분석 결과가 없습니다. 현재 지원 가능한 기간은 조회 결과에서 확인해 주세요.";
+    private static final String UNSUPPORTED_ANALYSIS =
+        "SOSpot은 과거 3개 분기의 점포 수 변화 탐지에 집중합니다. 미래 예측, 매출, 유동인구, 개별 점포 폐업은 제공하지 않습니다.";
+    private static final String CROSS_BSI =
+        "BSI는 지역(17개 시도)과 업종(9개)이 각각 별도 축으로 조사되어, 지역과 업종을 교차한 값은 존재하지 않습니다. 대전 전체 체감 BSI 또는 전국 업종별 체감 BSI로만 제공됩니다.";
+    private static final Set<String> OUTSIDE_REGIONS = Set.of(
+        "서울", "부산", "인천", "광주", "울산", "세종", "제주",
+        "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남");
+    private static final Set<String> UNSUPPORTED_TERMS = Set.of(
+        "미래", "예측", "매출", "유동인구", "폐업률", "폐업확률", "개별점포폐업");
+    private static final Pattern PERIOD_PATTERN = Pattern.compile(
+        "(20\\d{2})\\s*(?:년)?[.\\-/\\s]*(0[369]|12)\\s*(?:월)?");
+
     private final AliasesLoader aliasesLoader;
     private final RegionDetailService regionDetailService;
     private final AnomalyRegionService anomalyRegionService;
+    private final AnalysisPeriodService analysisPeriodService;
 
     public AiFallbackService(
         AliasesLoader aliasesLoader,
         RegionDetailService regionDetailService,
-        AnomalyRegionService anomalyRegionService
+        AnomalyRegionService anomalyRegionService,
+        AnalysisPeriodService analysisPeriodService
     ) {
         this.aliasesLoader = aliasesLoader;
         this.regionDetailService = regionDetailService;
         this.anomalyRegionService = anomalyRegionService;
+        this.analysisPeriodService = analysisPeriodService;
+    }
+
+    public Optional<AiChatResponse> guardrailAnswer(String question) {
+        if (question == null || question.isBlank()) {
+            return Optional.empty();
+        }
+
+        String normalized = normalize(question);
+        if (OUTSIDE_REGIONS.stream().anyMatch(normalized::contains)) {
+            return Optional.of(AiChatResponse.fallback(OUTSIDE_DAEJEON, List.of()));
+        }
+        if (UNSUPPORTED_TERMS.stream().anyMatch(normalized::contains)) {
+            return Optional.of(AiChatResponse.fallback(UNSUPPORTED_ANALYSIS, List.of()));
+        }
+        if ((normalized.contains("bsi") || normalized.contains("경기지수"))
+            && normalized.contains("대전")
+            && findCategory(question).isPresent()) {
+            return Optional.of(AiChatResponse.fallback(CROSS_BSI, List.of()));
+        }
+
+        Matcher matcher = PERIOD_PATTERN.matcher(question);
+        if (matcher.find()) {
+            String requestedPeriod = matcher.group(1) + matcher.group(2);
+            try {
+                analysisPeriodService.resolve(requestedPeriod);
+            } catch (RuntimeException exception) {
+                return Optional.of(AiChatResponse.fallback(UNSUPPORTED_PERIOD, List.of()));
+            }
+        }
+        return Optional.empty();
     }
 
     public AiChatResponse answer(String question, Throwable cause) {
         log.warn("Fallback 착수 - cause={}", cause == null ? "n/a" : cause.getMessage());
         if (question == null || question.isBlank()) {
             return AiChatResponse.fallback(GENERIC_UNAVAILABLE, List.of());
+        }
+
+        Optional<AiChatResponse> guardrailResponse = guardrailAnswer(question);
+        if (guardrailResponse.isPresent()) {
+            return guardrailResponse.get();
         }
 
         Optional<AliasCatalog.RegionEntry> region = findRegion(question);
@@ -114,8 +172,17 @@ public class AiFallbackService {
               .append("이며, Score ")
               .append(top.score())
               .append(", 상대격차 ")
-              .append(top.relativeGap())
+              .append(formatPercentPoint(top.relativeGap()))
               .append("입니다. ");
+        }
+        if (detail.excluded() != null && !detail.excluded().isEmpty()) {
+            sb.append("표본 부족으로 판정에서 제외된 대분류 업종은 ")
+              .append(detail.excluded().size())
+              .append("개(")
+              .append(detail.excluded().stream()
+                  .map(RegionDetailResponse.ExcludedCategory::catName)
+                  .collect(java.util.stream.Collectors.joining(", ")))
+              .append(")입니다. 해당 조합은 기준 분기보다 두 분기 전 점포 수가 20개 미만이라 등급 산정에서 제외되었습니다. ");
         }
         sb.append("점포 수 감소가 반드시 폐업을 의미하는 것은 아닙니다.");
         sb.append(" (AI 응답 생성 실패로 결정론적 요약을 제공했습니다.)");
@@ -127,6 +194,15 @@ public class AiFallbackService {
             return period.substring(0, 4) + "." + period.substring(4, 6);
         }
         return period == null || period.isBlank() ? "확인되지 않음" : period;
+    }
+
+    private String formatPercentPoint(java.math.BigDecimal value) {
+        if (value == null) {
+            return "확인되지 않음";
+        }
+        return value.multiply(java.math.BigDecimal.valueOf(100))
+            .setScale(1, java.math.RoundingMode.HALF_UP)
+            .toPlainString() + "%p";
     }
 
     private String renderCategorySummary(AliasCatalog.CategoryEntry category, org.example.sospot.dto.AnomalyRegionsResponse response) {

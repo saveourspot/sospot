@@ -46,6 +46,10 @@ public class AiChatService {
     }
 
     public AiChatResponse chat(String question, String clientKey) {
+        AiChatResponse guardrailResponse = fallbackService.guardrailAnswer(question).orElse(null);
+        if (guardrailResponse != null) {
+            return guardrailResponse;
+        }
         AiChatResponse cached = costControlService.getCached(question);
         if (cached != null) {
             return cached;
