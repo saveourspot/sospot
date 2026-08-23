@@ -2016,28 +2016,49 @@ body {
   font-size: 1.05rem;
 }
 
+.brand__symbol svg {
+  width: 30px;
+  height: 30px;
+  overflow: visible;
+  fill: #ffffff;
+}
+
+.brand__symbol .brand__pin {
+  fill: rgb(255 255 255 / 20%);
+  stroke: #ffffff;
+  stroke-width: 1.7;
+}
+
+.brand__symbol .brand__trend {
+  fill: none;
+  stroke: #ffffff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .brand__wordmark {
   display: grid;
   line-height: 1;
 }
 
-.brand__wordmark > span {
+.brand__name {
   font-size: 1.25rem;
-  font-weight: 720;
-  letter-spacing: -0.045em;
+  font-weight: 850;
+  letter-spacing: -0.055em;
 }
 
-.brand__wordmark strong {
+.brand__name-accent {
   color: var(--color-primary-dark);
-  font-weight: 900;
+  font-weight: 850;
 }
 
 .brand__wordmark small {
   margin-top: 5px;
-  color: #7c8983;
+  color: #78859b;
   font-size: 0.6rem;
   font-weight: 650;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.055em;
 }
 
 .primary-nav {
@@ -2588,4 +2609,302 @@ body {
   .summary-card {
     transition: none;
   }
+}
+
+/* Pastel blue theme */
+:root {
+  color: #283550;
+  background: #f6f8fd;
+  --color-primary: #6f91d8;
+  --color-primary-dark: #4869ad;
+  --color-accent: #9a86d5;
+  --color-surface: #ffffff;
+  --color-muted: #69758b;
+  --color-border: #dce4f2;
+}
+
+body {
+  background:
+    radial-gradient(circle at 8% 2%, rgb(137 174 232 / 14%), transparent 28rem),
+    #f6f8fd;
+}
+
+.page-container h1,
+.home-hero h1,
+.section-heading h2,
+.brand,
+.home-hero__meta strong,
+.summary-card__value,
+.top-region-item__name,
+.region-list-panel__heading h2,
+.reason-summary h2,
+.later-features h2 {
+  color: #263653;
+}
+
+.home-hero__description,
+.summary-card__label,
+.summary-card__description,
+.primary-nav a,
+.top-region-item__score,
+.filter-field > span,
+.sigungu-filter legend,
+.sigungu-filter label span,
+.region-list__name,
+.reason-summary > p {
+  color: #60708b;
+}
+
+.site-header {
+  border-bottom-color: rgb(90 119 171 / 14%);
+  background: rgb(249 251 255 / 90%);
+}
+
+.brand__symbol {
+  background: linear-gradient(145deg, #91afe3, #6688ce);
+  box-shadow: 0 7px 18px rgb(83 116 181 / 22%);
+}
+
+.primary-nav {
+  border-color: #e1e7f3;
+  background: rgb(255 255 255 / 82%);
+}
+
+.primary-nav a:hover,
+.primary-nav a.active {
+  color: #405f9e;
+  background: #eaf1ff;
+}
+
+.eyebrow::before {
+  background: #a48fdc;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #83a5e3, #6688ce);
+  box-shadow: 0 12px 28px rgb(91 125 190 / 22%);
+}
+
+.primary-button:hover {
+  background: linear-gradient(135deg, #7599dc, #5578bf);
+  box-shadow: 0 15px 34px rgb(91 125 190 / 29%);
+}
+
+.home-hero__meta span {
+  border-color: #dfe6f4;
+  color: #6b7890;
+  background: rgb(255 255 255 / 78%);
+}
+
+.home-hero__visual {
+  color: #eaf1ff;
+  background:
+    radial-gradient(circle at 50% 45%, rgb(181 202 242 / 26%), transparent 42%),
+    linear-gradient(145deg, #6d8fce, #4f6fae);
+  box-shadow: 0 28px 70px rgb(63 88 141 / 24%);
+}
+
+.home-hero__visual-header,
+.home-hero__visual-footer,
+.home-hero__signal small {
+  color: #d7e3f8;
+}
+
+.home-hero__visual-header i {
+  color: #f0ecff;
+  background: rgb(223 215 255 / 20%);
+}
+
+.home-hero__signal {
+  border-color: rgb(223 233 255 / 22%);
+  background:
+    linear-gradient(rgb(225 235 255 / 12%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(225 235 255 / 12%) 1px, transparent 1px);
+  background-size: 34px 34px;
+  box-shadow: inset 0 0 44px rgb(44 64 107 / 32%);
+}
+
+.home-hero__signal-ring {
+  border-color: rgb(226 235 255 / 30%);
+}
+
+.home-hero__signal-sweep {
+  background: linear-gradient(25deg, rgb(210 222 255 / 35%), transparent 70%);
+}
+
+.home-hero__signal-dot {
+  border-color: #f7f4ff;
+  background: #b49be3;
+  box-shadow: 0 0 0 6px rgb(180 155 227 / 18%);
+}
+
+.status-dot {
+  background: #b9a6e8;
+  box-shadow: 0 0 0 4px rgb(185 166 232 / 18%);
+}
+
+.summary-section {
+  background: #edf3fd;
+}
+
+.summary-section::before {
+  background-image: radial-gradient(#b9c9e6 0.7px, transparent 0.7px);
+}
+
+.summary-card,
+.top-region-list,
+.map-filters,
+.map-panel,
+.region-list-panel,
+.region-header,
+.anomaly-card,
+.trend-chart,
+.relative-gap-chart,
+.excluded-categories__pending,
+.later-features {
+  border-color: rgb(91 120 174 / 13%);
+  box-shadow: 0 14px 38px rgb(69 94 143 / 8%);
+}
+
+.summary-card::after {
+  background: #edf3fd;
+}
+
+.top-region-item:hover,
+.region-list li.is-highlighted {
+  background: #edf3ff;
+}
+
+.top-region-item__rank {
+  color: #ffffff;
+  background: #718fc9;
+}
+
+.ai-prompt {
+  border-color: rgb(255 255 255 / 18%);
+  background:
+    radial-gradient(circle at 90% 0%, rgb(202 189 243 / 34%), transparent 22rem),
+    linear-gradient(135deg, #7899d6, #607fbd);
+  box-shadow: 0 24px 60px rgb(69 94 143 / 22%);
+}
+
+.ai-prompt__intro .eyebrow,
+.ai-prompt__intro > p:last-child,
+.ai-prompt__privacy-notice,
+.ai-prompt__recommendations {
+  color: #e4ecfb;
+}
+
+.ai-prompt__input-row:focus-within {
+  outline-color: #c8d8f4;
+}
+
+.ai-prompt__input-row button {
+  background: #5879ba;
+}
+
+.ai-answer {
+  color: #30405d;
+  background: #fbfcff;
+}
+
+.ai-answer__heading span {
+  color: #4968a5;
+  background: #e8effc;
+}
+
+.ai-answer__content h3,
+.ai-answer__content h4,
+.ai-answer__content h5 {
+  color: #30405d;
+}
+
+.ai-answer__content hr,
+.ai-answer__evidence,
+.ai-answer .ai-answer__notice {
+  border-color: #dce5f3;
+}
+
+.ai-answer__content blockquote {
+  border-left-color: #8da8da;
+  color: #52627e;
+  background: #edf3ff;
+}
+
+.ai-answer__content code {
+  background: #e9effa;
+}
+
+.ai-answer__evidence summary {
+  color: #4d6daa;
+}
+
+.map-page__count,
+.map-preview-badge,
+.sigungu-filter input:checked + span {
+  border-color: #b9cae8;
+  color: #4968a5;
+  background: #e9f0fd;
+}
+
+.filter-field select,
+.sigungu-filter label span,
+.region-list-panel__heading {
+  border-color: #dce4f2;
+  background: #fbfcff;
+}
+
+.sigungu-filter input:focus-visible + span,
+.filter-field select:focus-visible,
+.region-list a:focus-visible {
+  outline-color: #a9bfe5;
+}
+
+.map-panel,
+.daejeon-map {
+  background: #e9eef8;
+}
+
+.region-header__title-row {
+  background:
+    radial-gradient(circle at 92% 5%, rgb(123 156 216 / 13%), transparent 19rem),
+    #ffffff;
+}
+
+.region-header__metrics {
+  background: #f2f5fb;
+}
+
+.reason-summary {
+  background: linear-gradient(135deg, #e9f0fc, #f3f5fc);
+  box-shadow: inset 4px 0 var(--color-primary);
+}
+
+.later-features {
+  background: #f0f3f9;
+}
+
+.site-footer {
+  background: #354869;
+}
+
+.data-source,
+.interpretation-note,
+.site-footer__copyright {
+  color: #c6d2e7;
+}
+
+.data-source__label {
+  color: #edf3ff;
+}
+
+.state-panel__icon,
+.grade-badge--normal {
+  color: #5b6980;
+  background: #edf0f6;
+}
+
+.grade-badge--interest {
+  color: #4668a5;
+  background: #e5edfc;
 }
