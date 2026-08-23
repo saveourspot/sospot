@@ -7,7 +7,7 @@ function TopRegionList({ regions = [] }) {
 
   if (topRegions.length === 0) {
     return (
-      <Empty message="분석 API 연결 후 우선검토 지역 TOP 5가 표시됩니다." />
+      <Empty message="표시할 우선검토 지역이 없습니다." />
     )
   }
 

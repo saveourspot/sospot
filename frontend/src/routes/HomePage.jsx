@@ -1,11 +1,17 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AiPromptBox from '../components/AiPromptBox.jsx'
+import ErrorState from '../components/ErrorState.jsx'
+import Loading from '../components/Loading.jsx'
 import SummaryCard from '../components/SummaryCard.jsx'
 import TopRegionList from '../components/TopRegionList.jsx'
-import mockSummary from '../lib/mockSummary.js'
+import { getSummary } from '../lib/api.js'
 
 function formatPercent(value) {
-  const percent = value * 100
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return '데이터 없음'
+
+  const percent = numericValue * 100
   return `${percent > 0 ? '+' : ''}${percent.toFixed(1)}`
 }
 
@@ -25,9 +31,43 @@ function formatPeriodLabel(period, comparisonPeriods) {
 }
 
 function HomePage() {
-  const { period, comparisonPeriods, data } = mockSummary
-  const priorityCount = data.gradeCounts.중점검토
-  const cautionCount = data.gradeCounts.주의
+  const [summary, setSummary] = useState(null)
+  const [error, setError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadSummary() {
+      setSummary(null)
+      setError('')
+
+      try {
+        const result = await getSummary()
+        if (!result?.data || !Array.isArray(result.comparisonPeriods)) {
+          throw new Error('분석 요약 응답 형식을 확인할 수 없습니다.')
+        }
+        if (!ignore) setSummary(result)
+      } catch (requestError) {
+        if (!ignore) {
+          setError(
+            requestError.response?.data?.message ||
+              requestError.message ||
+              '최근 분석 요약을 불러오지 못했습니다.',
+          )
+        }
+      }
+    }
+
+    loadSummary()
+    return () => {
+      ignore = true
+    }
+  }, [loadAttempt])
+
+  const data = summary?.data
+  const priorityCount = data?.gradeCounts?.중점검토 ?? 0
+  const cautionCount = data?.gradeCounts?.주의 ?? 0
 
   return (
     <main>
@@ -84,56 +124,77 @@ function HomePage() {
             <h2 id="summary-heading">최근 분석 요약</h2>
           </div>
           <p className="period-label">
-            {formatPeriodLabel(period, comparisonPeriods)}
+            {summary
+              ? formatPeriodLabel(summary.period, summary.comparisonPeriods)
+              : '최신 분석 완료 분기 기준'}
           </p>
         </div>
 
-        <div className="summary-grid">
-          <SummaryCard
-            label="분석 행정동"
-            value={data.analyzedDongCount}
-            unit="개"
-            description="대전 전체 행정동을 비교했습니다."
+        {!summary && !error && <Loading message="최근 분석 요약을 불러오고 있습니다." />}
+        {error && (
+          <ErrorState
+            message={error}
+            onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
           />
-          <SummaryCard
-            label="중점검토 · 주의 지역"
-            value={`${priorityCount} · ${cautionCount}`}
-            unit="개"
-            description="대전 내 상대적 검토 우선순위 기준입니다."
-            tone="priority"
-          />
-          <SummaryCard
-            label="대전 전체 점포 증감률"
-            value={formatPercent(data.cityStoreGrowthRate)}
-            unit="%"
-            description="직전 분기 대비 전체 점포 수 변화입니다."
-            tone="growth"
-          />
-          <SummaryCard
-            label="대전 체감 BSI"
-            value={data.latestBsi.value.toFixed(1)}
-            description={`${data.latestBsi.periodMonth} 기준 · 경기 맥락 참고 지표`}
-            tone="bsi"
-          />
-        </div>
+        )}
+        {data && (
+          <div className="summary-grid">
+            <SummaryCard
+              label="분석 행정동"
+              value={data.analyzedDongCount}
+              unit="개"
+              description="대전 전체 행정동을 비교했습니다."
+            />
+            <SummaryCard
+              label="중점검토 · 주의 지역"
+              value={`${priorityCount} · ${cautionCount}`}
+              unit="개"
+              description="대전 내 상대적 검토 우선순위 기준입니다."
+              tone="priority"
+            />
+            <SummaryCard
+              label="대전 전체 점포 증감률"
+              value={formatPercent(data.cityStoreGrowthRate)}
+              unit={Number.isFinite(Number(data.cityStoreGrowthRate)) ? '%' : ''}
+              description="직전 분기 대비 전체 점포 수 변화입니다."
+              tone="growth"
+            />
+            <SummaryCard
+              label="대전 체감 BSI"
+              value={
+                Number.isFinite(Number(data.latestBsi?.value))
+                  ? Number(data.latestBsi.value).toFixed(1)
+                  : '데이터 없음'
+              }
+              description={
+                data.latestBsi
+                  ? `${data.latestBsi.periodMonth} 기준 · 경기 맥락 참고 지표`
+                  : '제공 가능한 최근 BSI가 없습니다.'
+              }
+              tone="bsi"
+            />
+          </div>
+        )}
       </section>
 
-      <section className="top-regions-section" aria-labelledby="top-regions-heading">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">먼저 살펴볼 지역</p>
-            <h2 id="top-regions-heading">우선검토 지역 TOP 5</h2>
+      {data && (
+        <section className="top-regions-section" aria-labelledby="top-regions-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">먼저 살펴볼 지역</p>
+              <h2 id="top-regions-heading">우선검토 지역 TOP 5</h2>
+            </div>
+            <Link className="text-link" to="/map">
+              지도에서 전체 보기 →
+            </Link>
           </div>
-          <Link className="text-link" to="/map">
-            지도에서 전체 보기 →
-          </Link>
-        </div>
-        <p className="section-description">
-          행정동 종합 percentile을 기준으로 대전 내 상대적 검토 순서를
-          보여줍니다.
-        </p>
-        <TopRegionList regions={data.topRegions} />
-      </section>
+          <p className="section-description">
+            행정동 종합 percentile을 기준으로 대전 내 상대적 검토 순서를
+            보여줍니다.
+          </p>
+          <TopRegionList regions={data.topRegions} />
+        </section>
+      )}
 
       <div className="ai-prompt-wrapper">
         <AiPromptBox />

@@ -7,65 +7,76 @@ import Loading from '../components/Loading.jsx'
 import RelativeGapChart from '../components/RelativeGapChart.jsx'
 import RegionHeader from '../components/RegionHeader.jsx'
 import TrendChart from '../components/TrendChart.jsx'
+import { getBsi, getRegionDetail } from '../lib/api.js'
 
-const GEOJSON_URL = `${import.meta.env.BASE_URL}geo/daejeon_dong.geojson`
+function formatPeriodLabel(period, comparisonPeriods = []) {
+  if (!period) return '분석 기준 시점 없음'
+
+  const periods = comparisonPeriods
+    .map((item) => `${item.slice(0, 4)}.${item.slice(4, 6)}`)
+    .join(' → ')
+  return `${period.slice(0, 4)}.${period.slice(4, 6)} 기준 · ${periods}`
+}
+
+function formatPercentPoint(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return '데이터 없음'
+  return `${numericValue > 0 ? '+' : ''}${(numericValue * 100).toFixed(1)}%p`
+}
 
 function RegionDetailPage() {
   const { dongCode } = useParams()
-  const [header, setHeader] = useState(null)
-  const [notFound, setNotFound] = useState(false)
-  const [error, setError] = useState(null)
+  const [detailEnvelope, setDetailEnvelope] = useState(null)
+  const [bsi, setBsi] = useState(null)
+  const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
 
   useEffect(() => {
-    const controller = new AbortController()
+    let ignore = false
 
     async function loadRegion() {
-      setHeader(null)
-      setNotFound(false)
-      setError(null)
+      setDetailEnvelope(null)
+      setBsi(null)
+      setError('')
 
-      try {
-        const response = await fetch(GEOJSON_URL, { signal: controller.signal })
+      const [detailResult, bsiResult] = await Promise.allSettled([
+        getRegionDetail(dongCode),
+        getBsi(),
+      ])
 
-        if (!response.ok) {
-          throw new Error(`행정동 정보 요청 실패: ${response.status}`)
-        }
+      if (ignore) return
 
-        const geojson = await response.json()
-        const feature = geojson.features?.find(
-          (item) => item.properties?.dong_code === dongCode,
+      if (detailResult.status === 'rejected') {
+        const requestError = detailResult.reason
+        setError(
+          requestError.response?.data?.message ||
+            requestError.message ||
+            '행정동 상세 분석 결과를 불러오지 못했습니다.',
         )
+        return
+      }
 
-        if (!feature) {
-          setNotFound(true)
-          return
-        }
+      if (!detailResult.value?.data?.header) {
+        setError('행정동 상세 응답 형식을 확인할 수 없습니다.')
+        return
+      }
 
-        setHeader({
-          dongCode,
-          dongName: feature.properties.dong_name,
-          sigungu: feature.properties.sggnm,
-          grade: null,
-          pctScore: null,
-          rank: null,
-          totalDongCount: null,
-        })
-      } catch (loadError) {
-        if (loadError.name !== 'AbortError') {
-          setError(loadError)
-        }
+      setDetailEnvelope(detailResult.value)
+      if (bsiResult.status === 'fulfilled') {
+        setBsi(bsiResult.value?.data ?? null)
       }
     }
 
     loadRegion()
-    return () => controller.abort()
+    return () => {
+      ignore = true
+    }
   }, [dongCode, loadAttempt])
 
-  if (!header && !notFound && !error) {
+  if (!detailEnvelope && !error) {
     return (
       <main className="page-container">
-        <Loading message="행정동 정보를 불러오고 있습니다." />
+        <Loading message="행정동 상세 분석 결과를 불러오고 있습니다." />
       </main>
     )
   }
@@ -74,26 +85,39 @@ function RegionDetailPage() {
     return (
       <main className="page-container">
         <ErrorState
-          message={error.message}
+          message={error}
           onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
         />
       </main>
     )
   }
 
-  if (notFound) {
-    return (
-      <main className="page-container">
-        <Empty message="지원하는 대전 행정동을 찾을 수 없습니다." />
-      </main>
+  const { period, comparisonPeriods, data } = detailEnvelope
+  const { header, topAnomalies = [], majorRelativeGaps = [], excluded = [], trend } = data
+  const validRelativeGaps = majorRelativeGaps
+    .filter(
+      (category) =>
+        category.sampleSizeFlag === 'OK' &&
+        Number.isFinite(Number(category.relativeGap)),
     )
-  }
+    .map((category) => ({
+      ...category,
+      relativeGap: Number(category.relativeGap) * 100,
+    }))
+  const bsiByPeriod = new Map(
+    (bsi?.quarterlySeries ?? []).map((point) => [point.period, point.value]),
+  )
+  const trendSeries = (trend?.series ?? []).map((point) => ({
+    ...point,
+    bsi: bsiByPeriod.get(point.period) ?? null,
+  }))
+  const strongestAnomaly = topAnomalies[0]
 
   return (
     <main className="page-container region-detail-page">
       <RegionHeader
         header={header}
-        periodLabel="최신 분석 완료 분기 · 상세 API 연동 예정"
+        periodLabel={formatPeriodLabel(period, comparisonPeriods)}
       />
 
       <section className="reason-summary" aria-labelledby="reason-summary-heading">
@@ -102,9 +126,14 @@ function RegionDetailPage() {
           <h2 id="reason-summary-heading">왜 먼저 살펴봐야 하나요?</h2>
         </div>
         <p>
-          <strong>{header.dongName}</strong>의 순위, 이상 업종 수, 주요 업종과
-          최대 상대격차는 상세 분석 API 연결 후 실제 저장 결과를 바탕으로
-          표시됩니다.
+          <strong>{header.dongName}</strong>은 대전 {header.totalDongCount}개 행정동 중
+          {' '}<strong>{header.rank}위</strong>이며, 이상징후 업종은
+          {' '}<strong>{header.anomalyCatCount}개</strong>입니다.
+          {strongestAnomaly && (
+            <> 가장 높은 업종은 <strong>{strongestAnomaly.catName}</strong>으로,
+              대전 전체 동일 업종 대비 상대격차는
+              {' '}<strong>{formatPercentPoint(strongestAnomaly.relativeGap)}</strong>입니다.</>
+          )}
         </p>
         <span>
           이 지표는 미래를 예측하거나 정책지원 대상을 자동 결정하지 않습니다.
@@ -117,17 +146,25 @@ function RegionDetailPage() {
             <p className="eyebrow">업종별 판정 근거</p>
             <h2 id="top-anomalies-heading">이상 업종 TOP 3</h2>
           </div>
-          <p className="period-label">상세 분석 API 연동 예정</p>
+          <p className="period-label">{period} 분석 결과</p>
         </div>
         <p className="section-description">
           업종별 점포 수 변화와 대전 전체 동일 업종 흐름의 상대격차를 함께
           확인합니다.
         </p>
-        <div className="anomaly-card-grid">
-          {[1, 2, 3].map((rank) => (
-            <AnomalyCategoryCard key={rank} rank={rank} anomaly={null} />
-          ))}
-        </div>
+        {topAnomalies.length > 0 ? (
+          <div className="anomaly-card-grid">
+            {topAnomalies.map((anomaly, index) => (
+              <AnomalyCategoryCard
+                key={anomaly.catCode}
+                rank={index + 1}
+                anomaly={anomaly}
+              />
+            ))}
+          </div>
+        ) : (
+          <Empty message="표본 기준을 충족한 업종 분석 결과가 없습니다." />
+        )}
       </section>
 
       <section className="trend-section" aria-labelledby="trend-heading">
@@ -136,13 +173,15 @@ function RegionDetailPage() {
             <p className="eyebrow">최근 변화 비교</p>
             <h2 id="trend-heading">지역과 대전 전체 추세</h2>
           </div>
-          <p className="period-label">3개 분석 분기 · API 연동 예정</p>
+          <p className="period-label">
+            {trend ? `${trend.catName} · ${trendSeries.length}개 분석 분기` : '추세 없음'}
+          </p>
         </div>
         <p className="section-description">
           해당 지역과 대전 전체 동일 업종의 점포 수 흐름을 같은 축에서 비교하고,
           대전 체감 BSI는 보조적인 경기 맥락으로만 제공합니다.
         </p>
-        <TrendChart series={[]} />
+        <TrendChart series={trendSeries} bsiPeriodLabel={bsi?.periodMonth} />
         <p className="trend-section__notice">
           BSI는 이상징후 Score와 등급 계산에 사용되지 않으며, 지역×업종 교차
           BSI를 의미하지 않습니다.
@@ -155,13 +194,13 @@ function RegionDetailPage() {
             <p className="eyebrow">대전 전체 대비</p>
             <h2 id="relative-gap-heading">업종별 상대격차</h2>
           </div>
-          <p className="period-label">대분류 10개 · API 연동 예정</p>
+          <p className="period-label">유효 대분류 {validRelativeGaps.length}개</p>
         </div>
         <p className="section-description">
           음수는 해당 지역의 점포 수 변화가 대전 전체 동일 업종보다 상대적으로
           낮았음을 의미합니다.
         </p>
-        <RelativeGapChart categories={[]} />
+        <RelativeGapChart categories={validRelativeGaps} />
       </section>
 
       <section className="excluded-categories" aria-labelledby="excluded-heading">
@@ -170,22 +209,24 @@ function RegionDetailPage() {
             <p className="eyebrow">판정 제외</p>
             <h2 id="excluded-heading">표본 부족 업종</h2>
           </div>
-          <p className="period-label">상세 분석 API 연동 예정</p>
+          <p className="period-label">{excluded.length}개 업종</p>
         </div>
         <p className="section-description">
           기준 분기보다 두 분기 전 점포 수가 20개 미만인 업종은 이상징후
           점수와 등급을 계산하지 않습니다.
         </p>
-        <div className="excluded-categories__pending" role="status">
-          <span aria-hidden="true">i</span>
-          <div>
-            <strong>판정 제외 업종 데이터 연동 대기</strong>
-            <p>
-              상세 분석 API가 연결되면 표본 부족으로 판정에서 제외된 업종을
-              이곳에 표시합니다.
-            </p>
-          </div>
-        </div>
+        {excluded.length > 0 ? (
+          <ul className="excluded-categories__list">
+            {excluded.map((category) => (
+              <li key={category.catCode}>
+                <strong>{category.catName}</strong>
+                <span>{category.reason}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Empty message="표본 부족으로 판정에서 제외된 대분류 업종이 없습니다." />
+        )}
       </section>
 
       <section className="later-features" aria-labelledby="later-features-heading">

@@ -30,7 +30,7 @@ function RegionList({ regions, highlightedDongCode, onHighlight }) {
           <h2 id="region-list-heading">행정동 목록</h2>
           <p>등급순 · {sortedRegions.length}개</p>
         </div>
-        <span>미리보기</span>
+        <span>분석 결과</span>
       </div>
       {sortedRegions.length === 0 ? (
         <p className="region-list-panel__empty">선택된 자치구가 없습니다.</p>

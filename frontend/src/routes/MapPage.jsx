@@ -7,13 +7,18 @@ import Loading from '../components/Loading.jsx'
 import MapLegend from '../components/MapLegend.jsx'
 import RegionList from '../components/RegionList.jsx'
 import SigunguFilter from '../components/SigunguFilter.jsx'
+import { getAnomalyRegions, getRegionScores } from '../lib/api.js'
 import { GRADE_COLORS, NO_DATA_COLOR } from '../lib/gradeStyles.js'
 import { DAEJEON_SIGUNGU, MAJOR_CATEGORIES } from '../lib/mapFilters.js'
-import { createPreviewRegionScores } from '../lib/mockRegionScores.js'
 
 const DAEJEON_CENTER = [36.35, 127.38]
 const EXPECTED_DONG_COUNT = 82
 const GEOJSON_URL = `${import.meta.env.BASE_URL}geo/daejeon_dong.geojson`
+
+function formatAnalysisPeriod(period) {
+  if (!/^\d{6}$/.test(period)) return period
+  return `${period.slice(0, 4)}.${period.slice(4, 6)}`
+}
 
 function FitGeoJsonBounds({ geojson }) {
   const map = useMap()
@@ -22,14 +27,17 @@ function FitGeoJsonBounds({ geojson }) {
     const bounds = L.geoJSON(geojson).getBounds()
 
     if (bounds.isValid()) {
+      const daejeonBounds = bounds.pad(0.05)
+      map.setMaxBounds(daejeonBounds)
       map.fitBounds(bounds, { padding: [20, 20] })
+      map.setMinZoom(map.getZoom())
     }
   }, [geojson, map])
 
   return null
 }
 
-function createTooltipContent(feature, item) {
+function createTooltipContent(feature, item, isCategorySelected) {
   const container = document.createElement('div')
   container.className = 'region-tooltip'
 
@@ -48,10 +56,10 @@ function createTooltipContent(feature, item) {
 
   gradeLabel.textContent = '등급'
   gradeValue.textContent = item?.grade ?? '데이터 없음'
-  anomalyLabel.textContent = '이상 업종 수'
-  anomalyValue.textContent = Number.isInteger(item?.anomalyCatCount)
-    ? `${item.anomalyCatCount}개`
-    : 'API 연동 후 표시'
+  anomalyLabel.textContent = isCategorySelected ? '점포 수' : '이상 업종 수'
+  anomalyValue.textContent = isCategorySelected
+    ? Number.isInteger(item?.storeCount) ? `${item.storeCount}개` : '판정 제외'
+    : Number.isInteger(item?.anomalyCatCount) ? `${item.anomalyCatCount}개` : '데이터 없음'
 
   details.append(gradeLabel, gradeValue, anomalyLabel, anomalyValue)
   container.append(heading, sigungu, details)
@@ -64,7 +72,10 @@ function MapPage() {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedSigungu, setSelectedSigungu] = useState(DAEJEON_SIGUNGU)
   const [highlightedDongCode, setHighlightedDongCode] = useState(null)
-  const [error, setError] = useState(null)
+  const [analysisPeriod, setAnalysisPeriod] = useState('')
+  const [geoError, setGeoError] = useState(null)
+  const [scoreError, setScoreError] = useState(null)
+  const [isScoresLoading, setIsScoresLoading] = useState(true)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const layerByDongCode = useRef(new Map())
 
@@ -72,7 +83,7 @@ function MapPage() {
     const controller = new AbortController()
 
     async function loadGeojson() {
-      setError(null)
+      setGeoError(null)
 
       try {
         const response = await fetch(GEOJSON_URL, { signal: controller.signal })
@@ -94,7 +105,7 @@ function MapPage() {
         setGeojson(data)
       } catch (loadError) {
         if (loadError.name !== 'AbortError') {
-          setError(loadError)
+          setGeoError(loadError)
         }
       }
     }
@@ -104,12 +115,49 @@ function MapPage() {
   }, [loadAttempt])
 
   useEffect(() => {
-    if (geojson) {
-      setRegionScores(
-        createPreviewRegionScores(geojson.features, selectedCategory),
-      )
+    let ignore = false
+
+    async function loadRegionScores() {
+      setRegionScores([])
+      setScoreError(null)
+      setIsScoresLoading(true)
+
+      try {
+        const result = selectedCategory
+          ? await getAnomalyRegions({
+              catCode: selectedCategory,
+              catLevel: 'MAJOR',
+              topN: EXPECTED_DONG_COUNT,
+            })
+          : await getRegionScores()
+        const items = result?.data?.items
+
+        if (!Array.isArray(items)) {
+          throw new Error('지역 점수 응답 형식을 확인할 수 없습니다.')
+        }
+
+        if (!ignore) {
+          setAnalysisPeriod(result.period)
+          setRegionScores(items)
+        }
+      } catch (requestError) {
+        if (!ignore) {
+          setScoreError(
+            requestError.response?.data?.message ||
+              requestError.message ||
+              '지역 분석 결과를 불러오지 못했습니다.',
+          )
+        }
+      } finally {
+        if (!ignore) setIsScoresLoading(false)
+      }
     }
-  }, [geojson, selectedCategory])
+
+    loadRegionScores()
+    return () => {
+      ignore = true
+    }
+  }, [selectedCategory, loadAttempt])
 
   const gradeByDongCode = useMemo(
     () => new Map(regionScores.map((item) => [item.dongCode, item])),
@@ -137,15 +185,31 @@ function MapPage() {
   const onEachFeature = (feature, layer) => {
     const dongCode = feature.properties.dong_code
     layerByDongCode.current.set(dongCode, layer)
-    layer.bindTooltip(createTooltipContent(feature, gradeByDongCode.get(dongCode)), {
+    layer.bindTooltip(createTooltipContent(
+      feature,
+      gradeByDongCode.get(dongCode),
+      Boolean(selectedCategory),
+    ), {
       className: 'region-map-tooltip',
       direction: 'top',
+      interactive: false,
       opacity: 1,
+      permanent: false,
       sticky: true,
     })
     layer.on({
+      tooltipopen: () => {
+        layerByDongCode.current.forEach((otherLayer) => {
+          if (otherLayer !== layer && otherLayer.isTooltipOpen()) {
+            otherLayer.closeTooltip()
+          }
+        })
+      },
       mouseover: () => setHighlightedDongCode(dongCode),
-      mouseout: () => setHighlightedDongCode(null),
+      mouseout: () => {
+        layer.closeTooltip()
+        setHighlightedDongCode(null)
+      },
     })
   }
 
@@ -154,7 +218,11 @@ function MapPage() {
       const baseStyle = getBoundaryStyle(layer.feature)
       const isHighlighted = highlightedDongCode === dongCode
       layer.setTooltipContent(
-        createTooltipContent(layer.feature, gradeByDongCode.get(dongCode)),
+        createTooltipContent(
+          layer.feature,
+          gradeByDongCode.get(dongCode),
+          Boolean(selectedCategory),
+        ),
       )
 
       layer.setStyle(
@@ -173,7 +241,7 @@ function MapPage() {
         layer.bringToFront()
       }
     })
-  }, [getBoundaryStyle, gradeByDongCode, highlightedDongCode])
+  }, [getBoundaryStyle, gradeByDongCode, highlightedDongCode, selectedCategory])
 
   const selectedCategoryName =
     MAJOR_CATEGORIES.find((category) => category.code === selectedCategory)?.name ??
@@ -207,16 +275,26 @@ function MapPage() {
 
       <div className="map-workspace">
         <section className="map-panel" aria-label="대전 행정동 지도">
-          {!geojson && !error && <Loading message="행정동 경계를 불러오고 있습니다." />}
-          {error && (
+          {!geojson && !geoError && <Loading message="행정동 경계를 불러오고 있습니다." />}
+          {geoError && (
             <ErrorState
-              message={error.message}
+              message={geoError.message}
               onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
             />
           )}
-          {geojson && (
+          {geojson && scoreError && (
+            <ErrorState
+              message={scoreError}
+              onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
+            />
+          )}
+          {geojson && !scoreError && (
             <>
-              <div className="map-preview-badge">데이터 연동 전 색상 미리보기</div>
+              <div className="map-preview-badge">
+                {isScoresLoading
+                  ? '분석 결과 불러오는 중'
+                  : `${formatAnalysisPeriod(analysisPeriod)} 분석 결과`}
+              </div>
               <MapLegend />
               <MapContainer
                 className="daejeon-map"
@@ -224,6 +302,7 @@ function MapPage() {
                 zoom={11}
                 minZoom={9}
                 maxZoom={16}
+                maxBoundsViscosity={1}
                 scrollWheelZoom
               >
                 <TileLayer

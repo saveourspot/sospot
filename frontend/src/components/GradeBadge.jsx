@@ -1,3 +1,5 @@
+import { GRADE_COLORS, GRADE_TEXT_COLORS } from '../lib/gradeStyles.js'
+
 const GRADE_STYLES = {
   정상: 'normal',
   관심: 'interest',
@@ -12,7 +14,17 @@ function GradeBadge({ grade }) {
     return null
   }
 
-  return <span className={`grade-badge grade-badge--${style}`}>{grade}</span>
+  return (
+    <span
+      className={`grade-badge grade-badge--${style}`}
+      style={{
+        color: GRADE_TEXT_COLORS[grade],
+        backgroundColor: GRADE_COLORS[grade],
+      }}
+    >
+      {grade}
+    </span>
+  )
 }
 
 export default GradeBadge
