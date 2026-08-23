@@ -6,5 +6,5 @@ spring:
     driver-class-name: org.postgresql.Driver
 
 llm:
-  api-key:
-  base-url: https://api.anthropic.com
+  google:
+    api-key: your-google-ai-studio-api-key

@@ -15,6 +15,12 @@ spring:
 
 llm:
   cache-ttl-minutes: 60
+  google:
+    base-url: https://generativelanguage.googleapis.com/v1beta
+    model: gemini-3.6-flash
+    api-key: ${LLM_GOOGLE_API_KEY:}
+    timeout: 60s
+    max-tool-hops: 3
 
 logging:
   level:
