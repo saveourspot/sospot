@@ -902,6 +902,10 @@ a {
   font-size: 10px;
 }
 
+.daejeon-map .leaflet-interactive {
+  cursor: pointer;
+}
+
 .map-preview-badge {
   position: absolute;
   z-index: 600;

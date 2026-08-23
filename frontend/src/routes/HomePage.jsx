@@ -6,6 +6,7 @@ import Loading from '../components/Loading.jsx'
 import SummaryCard from '../components/SummaryCard.jsx'
 import TopRegionList from '../components/TopRegionList.jsx'
 import { getSummary } from '../lib/api.js'
+import { formatPeriod } from '../lib/periodFormat.js'
 
 function formatPercent(value) {
   const numericValue = Number(value)
@@ -24,7 +25,7 @@ function formatPeriodLabel(period, comparisonPeriods) {
   const month = Number(period.slice(4, 6))
   const quarter = Math.ceil(month / 3)
   const comparison = comparisonPeriods
-    .map((item) => `${item.slice(0, 4)}.${item.slice(4, 6)}`)
+    .map(formatPeriod)
     .join('~')
 
   return `${year}년 ${quarter}분기 · ${comparison} 비교`
@@ -168,7 +169,7 @@ function HomePage() {
               }
               description={
                 data.latestBsi
-                  ? `${data.latestBsi.periodMonth} 기준 · 경기 맥락 참고 지표`
+                  ? `${formatPeriod(data.latestBsi.periodMonth)} 기준 · 경기 맥락 참고 지표`
                   : '제공 가능한 최근 BSI가 없습니다.'
               }
               tone="bsi"

@@ -9,13 +9,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { formatPeriod } from '../lib/periodFormat.js'
 
 const tooltipFormatter = (value, name) => {
   if (name === '대전 체감 BSI') {
     return [Number(value).toFixed(1), name]
   }
 
-  return [`${Number(value).toLocaleString('ko-KR')}개`, name]
+  return [Number(value).toFixed(1), name]
 }
 
 function TrendChart({ series = [], bsiPeriodLabel }) {
@@ -34,17 +35,31 @@ function TrendChart({ series = [], bsiPeriodLabel }) {
     )
   }
 
+  const firstRegionCount = series[0].regionCount
+  const firstCityCount = series[0].cityCount
+  const indexedSeries = series.map((point) => ({
+    ...point,
+    regionIndex:
+      firstRegionCount > 0 ? (point.regionCount / firstRegionCount) * 100 : null,
+    cityIndex: firstCityCount > 0 ? (point.cityCount / firstCityCount) * 100 : null,
+  }))
+
   return (
     <div className="trend-chart">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={series} margin={{ top: 12, right: 10, left: 0, bottom: 4 }}>
+        <ComposedChart data={indexedSeries} margin={{ top: 12, right: 10, left: 0, bottom: 4 }}>
           <CartesianGrid stroke="#e6ebe8" strokeDasharray="3 3" />
-          <XAxis dataKey="period" tick={{ fill: '#68766f', fontSize: 12 }} />
+          <XAxis
+            dataKey="period"
+            tick={{ fill: '#68766f', fontSize: 12 }}
+            tickFormatter={formatPeriod}
+          />
           <YAxis
-            yAxisId="stores"
+            yAxisId="change"
             tick={{ fill: '#68766f', fontSize: 11 }}
-            tickFormatter={(value) => value.toLocaleString('ko-KR')}
+            tickFormatter={(value) => value.toFixed(0)}
             width={52}
+            domain={['auto', 'auto']}
           />
           <YAxis
             yAxisId="bsi"
@@ -65,20 +80,20 @@ function TrendChart({ series = [], bsiPeriodLabel }) {
             connectNulls
           />
           <Line
-            yAxisId="stores"
+            yAxisId="change"
             type="monotone"
-            dataKey="regionCount"
-            name="해당 지역"
-            stroke="#176b52"
+            dataKey="regionIndex"
+            name="해당 지역 (첫 분기=100)"
+            stroke="#6f91d8"
             strokeWidth={3}
             dot={{ r: 4 }}
           />
           <Line
-            yAxisId="stores"
+            yAxisId="change"
             type="monotone"
-            dataKey="cityCount"
-            name="대전 전체 동일 업종"
-            stroke="#607b9e"
+            dataKey="cityIndex"
+            name="대전 전체 동일 업종 (첫 분기=100)"
+            stroke="#9a86d5"
             strokeWidth={2.5}
             strokeDasharray="6 4"
             dot={{ r: 3 }}

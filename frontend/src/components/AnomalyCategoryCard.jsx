@@ -28,7 +28,7 @@ function Sparkline({ points }) {
       <div>
         {points.map((point) => (
           <span key={point.period}>
-            <small>{point.period}</small>
+            <small>{formatPeriod(point.period)}</small>
             <strong>{point.count}개</strong>
           </span>
         ))}
@@ -85,3 +85,4 @@ function AnomalyCategoryCard({ rank, anomaly }) {
 }
 
 export default AnomalyCategoryCard
+import { formatPeriod } from '../lib/periodFormat.js'

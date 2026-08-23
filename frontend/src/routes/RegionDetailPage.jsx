@@ -8,14 +8,15 @@ import RelativeGapChart from '../components/RelativeGapChart.jsx'
 import RegionHeader from '../components/RegionHeader.jsx'
 import TrendChart from '../components/TrendChart.jsx'
 import { getBsi, getRegionDetail } from '../lib/api.js'
+import { formatPeriod } from '../lib/periodFormat.js'
 
 function formatPeriodLabel(period, comparisonPeriods = []) {
   if (!period) return '분석 기준 시점 없음'
 
   const periods = comparisonPeriods
-    .map((item) => `${item.slice(0, 4)}.${item.slice(4, 6)}`)
+    .map(formatPeriod)
     .join(' → ')
-  return `${period.slice(0, 4)}.${period.slice(4, 6)} 기준 · ${periods}`
+  return `${formatPeriod(period)} 기준 · ${periods}`
 }
 
 function formatPercentPoint(value) {
@@ -146,7 +147,7 @@ function RegionDetailPage() {
             <p className="eyebrow">업종별 판정 근거</p>
             <h2 id="top-anomalies-heading">이상 업종 TOP 3</h2>
           </div>
-          <p className="period-label">{period} 분석 결과</p>
+          <p className="period-label">{formatPeriod(period)} 분석 결과</p>
         </div>
         <p className="section-description">
           업종별 점포 수 변화와 대전 전체 동일 업종 흐름의 상대격차를 함께
@@ -178,10 +179,13 @@ function RegionDetailPage() {
           </p>
         </div>
         <p className="section-description">
-          해당 지역과 대전 전체 동일 업종의 점포 수 흐름을 같은 축에서 비교하고,
-          대전 체감 BSI는 보조적인 경기 맥락으로만 제공합니다.
+          첫 분기를 100으로 환산해 해당 지역과 대전 전체 동일 업종의 변화 방향을
+          비교하고, 대전 체감 BSI는 보조적인 경기 맥락으로만 제공합니다.
         </p>
-        <TrendChart series={trendSeries} bsiPeriodLabel={bsi?.periodMonth} />
+        <TrendChart
+          series={trendSeries}
+          bsiPeriodLabel={formatPeriod(bsi?.periodMonth)}
+        />
         <p className="trend-section__notice">
           BSI는 이상징후 Score와 등급 계산에 사용되지 않으며, 지역×업종 교차
           BSI를 의미하지 않습니다.

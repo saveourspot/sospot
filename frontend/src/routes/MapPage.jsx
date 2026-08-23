@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet'
+import { useNavigate } from 'react-router-dom'
 import CategoryFilter from '../components/CategoryFilter.jsx'
 import ErrorState from '../components/ErrorState.jsx'
 import Loading from '../components/Loading.jsx'
@@ -10,15 +11,11 @@ import SigunguFilter from '../components/SigunguFilter.jsx'
 import { getAnomalyRegions, getRegionScores } from '../lib/api.js'
 import { GRADE_COLORS, NO_DATA_COLOR } from '../lib/gradeStyles.js'
 import { DAEJEON_SIGUNGU, MAJOR_CATEGORIES } from '../lib/mapFilters.js'
+import { formatPeriod } from '../lib/periodFormat.js'
 
 const DAEJEON_CENTER = [36.35, 127.38]
 const EXPECTED_DONG_COUNT = 82
 const GEOJSON_URL = `${import.meta.env.BASE_URL}geo/daejeon_dong.geojson`
-
-function formatAnalysisPeriod(period) {
-  if (!/^\d{6}$/.test(period)) return period
-  return `${period.slice(0, 4)}.${period.slice(4, 6)}`
-}
 
 function FitGeoJsonBounds({ geojson }) {
   const map = useMap()
@@ -67,6 +64,7 @@ function createTooltipContent(feature, item, isCategorySelected) {
 }
 
 function MapPage() {
+  const navigate = useNavigate()
   const [geojson, setGeojson] = useState(null)
   const [regionScores, setRegionScores] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -210,6 +208,7 @@ function MapPage() {
         layer.closeTooltip()
         setHighlightedDongCode(null)
       },
+      click: () => navigate(`/regions/${dongCode}`),
     })
   }
 
@@ -293,7 +292,7 @@ function MapPage() {
               <div className="map-preview-badge">
                 {isScoresLoading
                   ? '분석 결과 불러오는 중'
-                  : `${formatAnalysisPeriod(analysisPeriod)} 분석 결과`}
+                  : `${formatPeriod(analysisPeriod)} 분석 결과`}
               </div>
               <MapLegend />
               <MapContainer

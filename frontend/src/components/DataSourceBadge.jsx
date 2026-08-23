@@ -1,8 +1,10 @@
+import { formatPeriod } from '../lib/periodFormat.js'
+
 function DataSourceBadge({ period = '최신 분석 완료 분기' }) {
   return (
     <section className="data-source" aria-label="데이터 정보">
       <span className="data-source__label">데이터 기준</span>
-      <span>{period}</span>
+      <span>{formatPeriod(period)}</span>
       <span className="data-source__divider" aria-hidden="true" />
       <span className="data-source__label">출처</span>
       <span>
