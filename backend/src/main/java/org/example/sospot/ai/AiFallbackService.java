@@ -139,6 +139,9 @@ public class AiFallbackService {
         Optional<AliasCatalog.RegionEntry> region = findRegion(question);
         Optional<AliasCatalog.CategoryEntry> category = findCategory(question);
 
+        if (asksForPriorityCombinations(question)) {
+            return priorityCombinationsAnswer();
+        }
         if (region.isPresent()) {
             return regionAnswer(region.get());
         }
@@ -146,6 +149,50 @@ public class AiFallbackService {
             return categoryAnswer(category.get());
         }
         return AiChatResponse.fallback(GENERIC_NO_MATCH, List.of());
+    }
+
+    private boolean asksForPriorityCombinations(String question) {
+        String normalized = normalize(question);
+        boolean priorityIntent = normalized.contains("먼저살펴볼")
+            || normalized.contains("우선검토") || normalized.contains("검토우선");
+        boolean placeIntent = normalized.contains("지역") || normalized.contains("구역")
+            || normalized.contains("행정동") || normalized.contains("어디");
+        return priorityIntent && placeIntent;
+    }
+
+    private AiChatResponse priorityCombinationsAnswer() {
+        List<AiChatResponse.ToolCall> citations = new ArrayList<>();
+        try {
+            var envelope = anomalyRegionService.search(null, null, "MAJOR", null, null, "score", 5);
+            citations.add(new AiChatResponse.ToolCall(
+                "searchAnomalyRegions",
+                java.util.Map.of("catLevel", "MAJOR", "sortBy", "score", "topN", 5),
+                envelope
+            ));
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(formatPeriod(envelope.period()))
+                .append(" 기준 우선 검토 대상 상위 지역·업종 조합입니다.\n");
+            var items = envelope.data().items();
+            for (int i = 0; i < items.size(); i++) {
+                var item = items.get(i);
+                sb.append(i + 1).append(". ")
+                    .append(item.sigungu()).append(" ").append(item.dongName())
+                    .append(" × ").append(item.catName())
+                    .append(" — ").append(item.grade())
+                    .append(" (Score ").append(item.score()).append(")")
+                    .append(", 직전 분기 대비 ").append(formatPercent(item.growthRate()))
+                    .append(", 2분기 누적 ").append(formatPercent(item.cumChangeRate()))
+                    .append(item.consecutiveDecline() ? ", 최근 2분기 연속 감소" : "")
+                    .append("\n");
+            }
+            sb.append("등급과 Score는 절대 위험도가 아니라 대전 내 상대적 검토 우선순위입니다. ")
+                .append("점포 수 감소가 개별 점포의 폐업을 의미하지 않습니다.");
+            return AiChatResponse.fallback(sb.toString(), citations);
+        } catch (RuntimeException exception) {
+            log.warn("Fallback 우선검토 조합 조회 실패: {}", exception.getMessage());
+            return AiChatResponse.fallback(GENERIC_UNAVAILABLE, citations);
+        }
     }
 
     private AiChatResponse regionAnswer(AliasCatalog.RegionEntry region) {
@@ -235,6 +282,15 @@ public class AiFallbackService {
         return value.multiply(java.math.BigDecimal.valueOf(100))
             .setScale(1, java.math.RoundingMode.HALF_UP)
             .toPlainString() + "%p";
+    }
+
+    private String formatPercent(java.math.BigDecimal value) {
+        if (value == null) {
+            return "확인되지 않음";
+        }
+        return value.multiply(java.math.BigDecimal.valueOf(100))
+            .setScale(2, java.math.RoundingMode.HALF_UP)
+            .toPlainString() + "%";
     }
 
     private String renderCategorySummary(AliasCatalog.CategoryEntry category, org.example.sospot.dto.AnomalyRegionsResponse response) {

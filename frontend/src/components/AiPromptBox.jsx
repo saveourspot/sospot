@@ -24,6 +24,7 @@ function renderInlineMarkdown(text) {
 function MarkdownAnswer({ children }) {
   const lines = children.replace(/\r\n/g, '\n').split('\n')
   const blocks = []
+  let nextOrderedListNumber = 1
 
   for (let index = 0; index < lines.length;) {
     const line = lines[index].trim()
@@ -35,6 +36,7 @@ function MarkdownAnswer({ children }) {
 
     if (/^-{3,}$/.test(line)) {
       blocks.push(<hr key={`hr-${index}`} />)
+      nextOrderedListNumber = 1
       index += 1
       continue
     }
@@ -47,6 +49,7 @@ function MarkdownAnswer({ children }) {
           {renderInlineMarkdown(heading[2])}
         </Heading>,
       )
+      nextOrderedListNumber = 1
       index += 1
       continue
     }
@@ -81,13 +84,17 @@ function MarkdownAnswer({ children }) {
       }
 
       const List = ordered ? 'ol' : 'ul'
+      const listStart = ordered ? nextOrderedListNumber : undefined
       blocks.push(
-        <List key={`list-${index}`}>
+        <List key={`list-${index}`} start={listStart}>
           {items.map((item, itemIndex) => (
             <li key={itemIndex}>{renderInlineMarkdown(item)}</li>
           ))}
         </List>,
       )
+      if (ordered) {
+        nextOrderedListNumber += items.length
+      }
       continue
     }
 

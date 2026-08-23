@@ -3,6 +3,8 @@ package org.example.sospot.ai;
 import org.example.sospot.service.AnalysisPeriodService;
 import org.example.sospot.service.AnomalyRegionService;
 import org.example.sospot.service.RegionDetailService;
+import org.example.sospot.dto.AnomalyRegionsResponse;
+import org.example.sospot.dto.ApiEnvelope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -14,6 +16,7 @@ import static org.mockito.Mockito.when;
 class AiFallbackServiceTest {
 
     private AnalysisPeriodService analysisPeriodService;
+    private AnomalyRegionService anomalyRegionService;
     private AiFallbackService service;
 
     @BeforeEach
@@ -21,10 +24,11 @@ class AiFallbackServiceTest {
         AliasesLoader aliasesLoader = new AliasesLoader(new ObjectMapper());
         aliasesLoader.load();
         analysisPeriodService = mock(AnalysisPeriodService.class);
+        anomalyRegionService = mock(AnomalyRegionService.class);
         service = new AiFallbackService(
             aliasesLoader,
             mock(RegionDetailService.class),
-            mock(AnomalyRegionService.class),
+            anomalyRegionService,
             analysisPeriodService
         );
     }
@@ -80,4 +84,30 @@ class AiFallbackServiceTest {
 
         assertThat(response).isEmpty();
     }
+
+    @Test
+    void fallsBackToPriorityRegionCategoryCombinationsForRecommendedQuestion() {
+        var item = new AnomalyRegionsResponse.Item(
+            "30110551", "판암1동", "동구", "M1", "과학·기술", "MAJOR",
+            12, new java.math.BigDecimal("-0.3333"), new java.math.BigDecimal("0.0823"),
+            new java.math.BigDecimal("-0.4156"), new java.math.BigDecimal("-0.4000"),
+            true, "OK", new java.math.BigDecimal("100.00"), "중점검토"
+        );
+        when(anomalyRegionService.search(null, null, "MAJOR", null, null, "score", 5))
+            .thenReturn(new ApiEnvelope<>("202606", java.util.List.of(),
+                new AnomalyRegionsResponse(java.util.List.of(item))));
+
+        var response = service.answer(
+            "이번 분기에 먼저 살펴볼 구역은 어디임?",
+            new RuntimeException("LLM unavailable")
+        );
+
+        assertThat(response.answer())
+            .contains("2026.06 기준 우선 검토 대상 상위 지역·업종 조합")
+            .contains("1. 동구 판암1동 × 과학·기술")
+            .contains("직전 분기 대비 -33.33%");
+        assertThat(response.toolCalls()).extracting(call -> call.name())
+            .containsExactly("searchAnomalyRegions");
+    }
+
 }
