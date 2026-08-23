@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -69,6 +70,10 @@ public class AiFallbackService {
         }
 
         String normalized = normalize(question);
+        Optional<String> ambiguousRegion = ambiguousRegionAnswer(normalized);
+        if (ambiguousRegion.isPresent()) {
+            return Optional.of(AiChatResponse.fallback(ambiguousRegion.get(), List.of()));
+        }
         if (OUTSIDE_REGIONS.stream().anyMatch(normalized::contains)) {
             return Optional.of(AiChatResponse.fallback(OUTSIDE_DAEJEON, List.of()));
         }
@@ -88,6 +93,33 @@ public class AiFallbackService {
                 analysisPeriodService.resolve(requestedPeriod);
             } catch (RuntimeException exception) {
                 return Optional.of(AiChatResponse.fallback(UNSUPPORTED_PERIOD, List.of()));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<String> ambiguousRegionAnswer(String normalizedQuestion) {
+        java.util.Map<String, Set<String>> groupedRegions = new java.util.HashMap<>();
+        for (AliasCatalog.RegionEntry region : aliasesLoader.catalog().regions()) {
+            Matcher matcher = Pattern.compile("^(.+?)([1-9])동$").matcher(region.canonical());
+            if (matcher.matches()) {
+                groupedRegions.computeIfAbsent(matcher.group(1), ignored -> new TreeSet<>())
+                    .add(region.canonical());
+            }
+        }
+
+        for (var entry : groupedRegions.entrySet()) {
+            String broadName = entry.getKey() + "동";
+            boolean asksForBroadName = normalizedQuestion.contains(normalize(broadName));
+            boolean namesSpecificRegion = entry.getValue().stream()
+                .anyMatch(name -> normalizedQuestion.contains(normalize(name)));
+            if (asksForBroadName && !namesSpecificRegion) {
+                String regionNames = String.join("·", entry.getValue());
+                return Optional.of(
+                    broadName + "은(는) SOSpot 분석에서 단일 행정동이 아닙니다. "
+                    + regionNames + "으로 나뉘므로, 조회할 행정동을 지정해 주세요. "
+                    + "여러 지역을 함께 보려면 \"" + regionNames + " 전체 비교\"처럼 질문할 수 있습니다."
+                );
             }
         }
         return Optional.empty();

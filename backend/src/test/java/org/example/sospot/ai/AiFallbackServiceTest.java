@@ -63,4 +63,21 @@ class AiFallbackServiceTest {
         assertThat(response).isPresent();
         assertThat(response.orElseThrow().answer()).contains("미래 예측, 매출, 유동인구, 개별 점포 폐업");
     }
+
+    @Test
+    void explainsWhenBroadNeighborhoodNameMapsToMultipleAdministrativeDongs() {
+        var response = service.guardrailAnswer("노은동 음식업 현황 알려줘");
+
+        assertThat(response).isPresent();
+        assertThat(response.orElseThrow().answer())
+            .contains("단일 행정동이 아닙니다")
+            .contains("노은1동·노은2동·노은3동");
+    }
+
+    @Test
+    void allowsSpecificNumberedAdministrativeDong() {
+        var response = service.guardrailAnswer("노은2동 음식업 현황 알려줘");
+
+        assertThat(response).isEmpty();
+    }
 }
