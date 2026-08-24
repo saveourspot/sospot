@@ -3,6 +3,8 @@ package org.example.sospot.ai;
 import org.example.sospot.service.AnalysisPeriodService;
 import org.example.sospot.service.AnomalyRegionService;
 import org.example.sospot.service.RegionDetailService;
+import org.example.sospot.service.RegionComparisonService;
+import org.example.sospot.service.BsiService;
 import org.example.sospot.dto.AnomalyRegionsResponse;
 import org.example.sospot.dto.ApiEnvelope;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +31,9 @@ class AiFallbackServiceTest {
             aliasesLoader,
             mock(RegionDetailService.class),
             anomalyRegionService,
-            analysisPeriodService
+            analysisPeriodService,
+            mock(RegionComparisonService.class),
+            mock(BsiService.class)
         );
     }
 

@@ -6,6 +6,8 @@ import org.example.sospot.dto.RegionDetailResponse;
 import org.example.sospot.service.AnalysisPeriodService;
 import org.example.sospot.service.AnomalyRegionService;
 import org.example.sospot.service.RegionDetailService;
+import org.example.sospot.service.RegionComparisonService;
+import org.example.sospot.service.BsiService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,9 +43,10 @@ public class AiFallbackService {
         "BSI는 지역(17개 시도)과 업종(9개)이 각각 별도 축으로 조사되어, 지역과 업종을 교차한 값은 존재하지 않습니다. 대전 전체 체감 BSI 또는 전국 업종별 체감 BSI로만 제공됩니다.";
     private static final Set<String> OUTSIDE_REGIONS = Set.of(
         "서울", "부산", "인천", "광주", "울산", "세종", "제주",
-        "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남");
+        "경기도", "강원", "충북", "충남", "전북", "전남", "경북", "경남");
     private static final Set<String> UNSUPPORTED_TERMS = Set.of(
-        "미래", "예측", "매출", "유동인구", "폐업률", "폐업확률", "개별점포폐업");
+        "미래", "예측", "앞으로", "망할", "망하는", "매출", "유동인구",
+        "폐업률", "폐업확률", "개별점포폐업");
     private static final Pattern PERIOD_PATTERN = Pattern.compile(
         "(20\\d{2})\\s*(?:년)?[.\\-/\\s]*(0[369]|12)\\s*(?:월)?");
 
@@ -51,17 +54,23 @@ public class AiFallbackService {
     private final RegionDetailService regionDetailService;
     private final AnomalyRegionService anomalyRegionService;
     private final AnalysisPeriodService analysisPeriodService;
+    private final RegionComparisonService regionComparisonService;
+    private final BsiService bsiService;
 
     public AiFallbackService(
         AliasesLoader aliasesLoader,
         RegionDetailService regionDetailService,
         AnomalyRegionService anomalyRegionService,
-        AnalysisPeriodService analysisPeriodService
+        AnalysisPeriodService analysisPeriodService,
+        RegionComparisonService regionComparisonService,
+        BsiService bsiService
     ) {
         this.aliasesLoader = aliasesLoader;
         this.regionDetailService = regionDetailService;
         this.anomalyRegionService = anomalyRegionService;
         this.analysisPeriodService = analysisPeriodService;
+        this.regionComparisonService = regionComparisonService;
+        this.bsiService = bsiService;
     }
 
     public Optional<AiChatResponse> guardrailAnswer(String question) {
@@ -80,19 +89,32 @@ public class AiFallbackService {
         if (UNSUPPORTED_TERMS.stream().anyMatch(normalized::contains)) {
             return Optional.of(AiChatResponse.fallback(UNSUPPORTED_ANALYSIS, List.of()));
         }
-        if ((normalized.contains("bsi") || normalized.contains("경기지수"))
-            && normalized.contains("대전")
-            && findCategory(question).isPresent()) {
+        boolean asksBsi = normalized.contains("bsi") || normalized.contains("경기지수");
+        boolean hasDaejeonScope = normalized.contains("대전") || !findRegions(question).isEmpty();
+        if (asksBsi && hasDaejeonScope && findCategory(question).isPresent()) {
             return Optional.of(AiChatResponse.fallback(CROSS_BSI, List.of()));
         }
 
-        Matcher matcher = PERIOD_PATTERN.matcher(question);
-        if (matcher.find()) {
-            String requestedPeriod = matcher.group(1) + matcher.group(2);
+        Optional<String> requestedPeriod = extractRequestedPeriod(question);
+        if (requestedPeriod.isPresent()) {
             try {
-                analysisPeriodService.resolve(requestedPeriod);
+                analysisPeriodService.resolve(requestedPeriod.get());
             } catch (RuntimeException exception) {
                 return Optional.of(AiChatResponse.fallback(UNSUPPORTED_PERIOD, List.of()));
+            }
+        } else {
+            Matcher yearMatcher = Pattern.compile("(20\\d{2})\\s*년?").matcher(question);
+            if (yearMatcher.find()) {
+                try {
+                    String latest = analysisPeriodService.resolve(null);
+                    boolean supportedYear = analysisPeriodService.comparisonPeriods(latest).stream()
+                        .anyMatch(period -> period.startsWith(yearMatcher.group(1)));
+                    if (!supportedYear) {
+                        return Optional.of(AiChatResponse.fallback(UNSUPPORTED_PERIOD, List.of()));
+                    }
+                } catch (RuntimeException exception) {
+                    return Optional.of(AiChatResponse.fallback(UNSUPPORTED_PERIOD, List.of()));
+                }
             }
         }
         return Optional.empty();
@@ -136,37 +158,124 @@ public class AiFallbackService {
             return guardrailResponse.get();
         }
 
-        Optional<AliasCatalog.RegionEntry> region = findRegion(question);
+        List<AliasCatalog.RegionEntry> regions = findRegions(question);
+        Optional<AliasCatalog.RegionEntry> region = regions.stream().findFirst();
         Optional<AliasCatalog.CategoryEntry> category = findCategory(question);
+        String normalizedQuestion = normalize(question);
 
-        if (asksForPriorityCombinations(question)) {
-            return priorityCombinationsAnswer();
+        if (normalizedQuestion.contains("bsi") || normalizedQuestion.contains("체감경기")
+            || normalizedQuestion.contains("경기지수")) {
+            return bsiAnswer();
+        }
+
+        boolean comparisonIntent = normalizedQuestion.contains("비교")
+            || normalizedQuestion.contains("차이") || normalizedQuestion.contains("중어디")
+            || normalizedQuestion.contains("더이상징후");
+        if (regions.size() >= 2 && comparisonIntent) {
+            return comparisonAnswer(regions.get(0), regions.get(1), category.orElse(null), question);
+        }
+        if (region.isEmpty() && category.isEmpty() && asksForPriorityCombinations(question)) {
+            return priorityCombinationsAnswer(question);
         }
         if (region.isPresent()) {
             return regionAnswer(region.get());
         }
         if (category.isPresent()) {
-            return categoryAnswer(category.get());
+            return categoryAnswer(category.get(), question);
         }
         return AiChatResponse.fallback(GENERIC_NO_MATCH, List.of());
     }
 
+    private AiChatResponse bsiAnswer() {
+        List<AiChatResponse.ToolCall> citations = new ArrayList<>();
+        try {
+            var envelope = bsiService.getBsi(null);
+            citations.add(new AiChatResponse.ToolCall("getBsiContext", java.util.Map.of(), envelope));
+            var data = envelope.data();
+            String month = data.periodMonth() == null ? "확인되지 않음"
+                : data.periodMonth().replace('-', '.');
+            String text = month + " 기준 대전 체감 BSI는 "
+                + data.metrics().daejeonSentiment() + "이며, 경기전반 체감 BSI는 "
+                + data.metrics().overallSentiment() + "입니다. "
+                + "BSI는 이상징후 Score나 등급 산정에 사용하지 않는 보조 경기 맥락입니다.";
+            return AiChatResponse.fallback(text, citations);
+        } catch (RuntimeException exception) {
+            log.warn("Fallback BSI 조회 실패: {}", exception.getMessage());
+            return AiChatResponse.fallback(GENERIC_UNAVAILABLE, citations);
+        }
+    }
+
+    private AiChatResponse comparisonAnswer(
+        AliasCatalog.RegionEntry first,
+        AliasCatalog.RegionEntry second,
+        AliasCatalog.CategoryEntry category,
+        String question
+    ) {
+        List<AiChatResponse.ToolCall> citations = new ArrayList<>();
+        try {
+            String period = extractRequestedPeriod(question).orElse(null);
+            String catCode = category == null ? null : category.catCode();
+            var envelope = regionComparisonService.compare(
+                first.dongCode(), second.dongCode(), period, catCode);
+            java.util.Map<String, Object> args = new java.util.LinkedHashMap<>();
+            args.put("dongA", first.dongCode());
+            args.put("dongB", second.dongCode());
+            if (period != null) args.put("period", period);
+            if (catCode != null) args.put("catCode", catCode);
+            citations.add(new AiChatResponse.ToolCall("compareRegions", args, envelope));
+
+            var data = envelope.data();
+            var a = data.regionA();
+            var b = data.regionB();
+            StringBuilder sb = new StringBuilder();
+            sb.append(formatPeriod(envelope.period())).append(" 기준 ")
+                .append(a.sigungu()).append(" ").append(a.dongName())
+                .append("과(와) ").append(b.sigungu()).append(" ").append(b.dongName())
+                .append("을 비교했습니다. ")
+                .append(a.dongName()).append("은 ").append(a.grade()).append("·")
+                .append(a.rank()).append("위, ")
+                .append(b.dongName()).append("은 ").append(b.grade()).append("·")
+                .append(b.rank()).append("위입니다. ");
+            if (category != null) {
+                sb.append(category.canonical()).append(" 업종 비교 결과는 도구 근거에서 확인할 수 있습니다. ");
+            }
+            sb.append("등급과 순위는 대전 82개 행정동 내 상대적 검토 우선순위이며, ")
+                .append("점포 수 감소가 개별 점포의 폐업을 의미하지 않습니다.");
+            return AiChatResponse.fallback(sb.toString(), citations);
+        } catch (RuntimeException exception) {
+            log.warn("Fallback 지역 비교 실패: {}", exception.getMessage());
+            return AiChatResponse.fallback(GENERIC_UNAVAILABLE, citations);
+        }
+    }
+
     private boolean asksForPriorityCombinations(String question) {
         String normalized = normalize(question);
-        boolean priorityIntent = normalized.contains("먼저살펴볼")
-            || normalized.contains("우선검토") || normalized.contains("검토우선");
+        boolean priorityIntent = normalized.contains("먼저살펴") || normalized.contains("우선검토")
+            || normalized.contains("검토우선") || normalized.contains("이상징후큰")
+            || normalized.contains("제일안좋") || normalized.contains("가장안좋")
+            || normalized.contains("중점검토");
         boolean placeIntent = normalized.contains("지역") || normalized.contains("구역")
             || normalized.contains("행정동") || normalized.contains("어디");
         return priorityIntent && placeIntent;
     }
 
-    private AiChatResponse priorityCombinationsAnswer() {
+    private AiChatResponse priorityCombinationsAnswer(String question) {
         List<AiChatResponse.ToolCall> citations = new ArrayList<>();
         try {
-            var envelope = anomalyRegionService.search(null, null, "MAJOR", null, null, "score", 5);
+            String normalized = normalize(question);
+            String grade = normalized.contains("중점검토") ? "중점검토" : null;
+            Integer topN = extractTopN(question).orElse(5);
+            String period = extractRequestedPeriod(question).orElse(null);
+            var envelope = anomalyRegionService.search(period, null, "MAJOR", grade, null, "score", topN);
+            java.util.Map<String, Object> args = new java.util.LinkedHashMap<>();
+            args.put("catLevel", "MAJOR");
+            args.put("sortBy", "score");
+            args.put("topN", topN);
+            if (grade != null) args.put("grade", grade);
+            if (period != null) args.put("period", period);
             citations.add(new AiChatResponse.ToolCall(
                 "searchAnomalyRegions",
-                java.util.Map.of("catLevel", "MAJOR", "sortBy", "score", "topN", 5),
+                args,
                 envelope
             ));
 
@@ -195,6 +304,27 @@ public class AiFallbackService {
         }
     }
 
+    private Optional<Integer> extractTopN(String question) {
+        Matcher matcher = Pattern.compile("(?:상위|top)\\s*(\\d{1,3})", Pattern.CASE_INSENSITIVE)
+            .matcher(question);
+        if (!matcher.find()) return Optional.empty();
+        return Optional.of(Math.min(200, Integer.parseInt(matcher.group(1))));
+    }
+
+    private Optional<String> extractRequestedPeriod(String question) {
+        Matcher quarterMatcher = Pattern.compile("(20\\d{2})\\s*년?\\s*([1-4])\\s*분기")
+            .matcher(question);
+        if (quarterMatcher.find()) {
+            int month = Integer.parseInt(quarterMatcher.group(2)) * 3;
+            return Optional.of(quarterMatcher.group(1) + String.format("%02d", month));
+        }
+        Matcher monthMatcher = PERIOD_PATTERN.matcher(question);
+        if (monthMatcher.find()) {
+            return Optional.of(monthMatcher.group(1) + monthMatcher.group(2));
+        }
+        return Optional.empty();
+    }
+
     private AiChatResponse regionAnswer(AliasCatalog.RegionEntry region) {
         List<AiChatResponse.ToolCall> citations = new ArrayList<>();
         try {
@@ -213,14 +343,29 @@ public class AiFallbackService {
         }
     }
 
-    private AiChatResponse categoryAnswer(AliasCatalog.CategoryEntry category) {
+    private AiChatResponse categoryAnswer(AliasCatalog.CategoryEntry category, String question) {
         String catLevel = "MAJOR".equalsIgnoreCase(category.catLevel()) ? "MAJOR" : "MIDDLE";
         List<AiChatResponse.ToolCall> citations = new ArrayList<>();
         try {
-            var envelope = anomalyRegionService.search(null, category.catCode(), catLevel, null, null, "score", 5);
+            String normalized = normalize(question);
+            String grade = java.util.List.of("중점검토", "주의", "관심", "정상").stream()
+                .filter(normalized::contains).findFirst().orElse(null);
+            Boolean consecutiveDecline = normalized.contains("연속감소")
+                || normalized.contains("연속으로감소") ? Boolean.TRUE : null;
+            String period = extractRequestedPeriod(question).orElse(null);
+            Integer topN = extractTopN(question).orElse(5);
+            var envelope = anomalyRegionService.search(
+                period, category.catCode(), catLevel, grade, consecutiveDecline, "score", topN);
+            java.util.Map<String, Object> args = new java.util.LinkedHashMap<>();
+            args.put("catCode", category.catCode());
+            args.put("catLevel", catLevel);
+            args.put("topN", topN);
+            if (grade != null) args.put("grade", grade);
+            if (consecutiveDecline != null) args.put("consecutiveDecline", consecutiveDecline);
+            if (period != null) args.put("period", period);
             citations.add(new AiChatResponse.ToolCall(
                 "searchAnomalyRegions",
-                java.util.Map.of("catCode", category.catCode(), "catLevel", catLevel, "topN", 5),
+                args,
                 envelope
             ));
             String text = renderCategorySummary(category, envelope.data());
@@ -312,15 +457,21 @@ public class AiFallbackService {
     }
 
     private Optional<AliasCatalog.RegionEntry> findRegion(String question) {
+        return findRegions(question).stream().findFirst();
+    }
+
+    private List<AliasCatalog.RegionEntry> findRegions(String question) {
         String haystack = normalize(question);
+        List<AliasCatalog.RegionEntry> matches = new ArrayList<>();
         for (AliasCatalog.RegionEntry region : aliasesLoader.catalog().regions()) {
             for (String alias : region.aliases()) {
                 if (alias.length() >= 2 && haystack.contains(normalize(alias))) {
-                    return Optional.of(region);
+                    matches.add(region);
+                    break;
                 }
             }
         }
-        return Optional.empty();
+        return matches;
     }
 
     private Optional<AliasCatalog.CategoryEntry> findCategory(String question) {
