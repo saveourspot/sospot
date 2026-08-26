@@ -289,7 +289,7 @@ public class AiFallbackService {
                     .append(item.sigungu()).append(" ").append(item.dongName())
                     .append(" × ").append(item.catName())
                     .append(" — ").append(item.grade())
-                    .append(" (Score ").append(item.score()).append(")")
+                    .append(" (점수 ").append(item.score()).append(")")
                     .append(", 직전 분기 대비 ").append(formatPercent(item.growthRate()))
                     .append(", 2분기 누적 ").append(formatPercent(item.cumChangeRate()))
                     .append(item.consecutiveDecline() ? ", 최근 2분기 연속 감소" : "")
@@ -390,7 +390,7 @@ public class AiFallbackService {
         if (detail.topAnomalies() != null && !detail.topAnomalies().isEmpty()) {
             var top = detail.topAnomalies().get(0);
             sb.append("- **가장 두드러진 이상 업종:** ").append(top.catName())
-              .append(" — Score ").append(top.score())
+              .append(" — 점수 ").append(top.score())
               .append(", 상대격차 ").append(formatPercentPoint(top.relativeGap()))
               .append("\n");
         }
@@ -456,7 +456,7 @@ public class AiFallbackService {
             for (int i = 0; i < response.items().size(); i++) {
                 var item = response.items().get(i);
                 if (i > 0) sb.append(", ");
-                sb.append(item.dongName()).append("(Score ").append(item.score()).append(", ").append(item.grade()).append(")");
+                sb.append(item.dongName()).append("(점수 ").append(item.score()).append(", ").append(item.grade()).append(")");
             }
             sb.append(". ");
         } else {

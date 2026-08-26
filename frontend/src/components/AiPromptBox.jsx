@@ -157,7 +157,7 @@ function AiPromptBox() {
     <section className="ai-prompt" aria-labelledby="ai-prompt-heading">
       <div className="ai-prompt__intro">
         <p className="eyebrow">SOSpot AI</p>
-        <h2 id="ai-prompt-heading">분석 결과를 자연어로 물어보세요</h2>
+        <h2 id="ai-prompt-heading">대전 상권, 무엇이 궁금한가요?</h2>
         <p>
           지역과 업종을 함께 질문하면 실제 분석 API 결과를 바탕으로 근거를
           설명합니다.

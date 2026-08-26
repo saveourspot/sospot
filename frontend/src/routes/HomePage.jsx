@@ -190,7 +190,7 @@ function HomePage() {
             </Link>
           </div>
           <p className="section-description">
-            행정동 종합 percentile을 기준으로 대전 내 상대적 검토 순서를
+            행정동 종합 백분위를 기준으로 대전 내 상대적 검토 순서를
             보여줍니다.
           </p>
           <TopRegionList regions={data.topRegions} />

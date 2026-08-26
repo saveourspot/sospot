@@ -22,7 +22,7 @@ function RegionHeader({ header, periodLabel }) {
 
       <dl className="region-header__metrics">
         <div>
-          <dt>행정동 종합 percentile</dt>
+          <dt>행정동 종합 백분위</dt>
           <dd>{hasScore ? `${header.pctScore.toFixed(1)}점` : '데이터 없음'}</dd>
         </div>
         <div>

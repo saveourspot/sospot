@@ -285,7 +285,7 @@ function RegionDetailPage() {
           bsiPeriodLabel={formatPeriod(bsi?.periodMonth)}
         />
         <p className="trend-section__notice">
-          BSI는 이상징후 Score와 등급 계산에 사용되지 않으며, 지역×업종 교차
+          BSI는 이상징후 점수와 등급 계산에 사용되지 않으며, 지역×업종 교차
           BSI를 의미하지 않습니다.
         </p>
       </section>
