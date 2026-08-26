@@ -9,12 +9,12 @@ spring:
     open-in-view: false
     properties:
       hibernate.format_sql: true
-
-server:
-  port: ${SERVER_PORT:8080}
   flyway:
     enabled: true
     baseline-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
 
 llm:
   usage:
@@ -31,4 +31,4 @@ llm:
 
 logging:
   level:
-    org.hibernate.SQL: debug
+    org.hibernate.SQL: info

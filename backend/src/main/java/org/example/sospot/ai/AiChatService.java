@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -71,7 +72,14 @@ public class AiChatService {
             costControlService.cache(question, response);
             return response;
         } catch (RuntimeException e) {
-            log.warn("LLM 경로 실패, fallback으로 전환", e);
+            boolean quotaExceeded = e.getMessage() != null && e.getMessage().contains("Gemini HTTP 429");
+            if (quotaExceeded) {
+                costControlService.blockModelCalls(Duration.ofMinutes(1));
+                log.warn("AI 제공자 호출 한도 초과, 1분간 API 기반 안내로 전환");
+            } else {
+                log.warn("LLM 경로 실패, fallback으로 전환: {}", e.getMessage());
+            }
+            log.debug("LLM 경로 실패 상세", e);
             return fallbackService.answer(question, e);
         }
     }

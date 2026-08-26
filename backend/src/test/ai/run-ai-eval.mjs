@@ -31,6 +31,10 @@ const cases = [
   ['L01', '중점검토 지역 중 음식업도 감소한 곳 알려줘', 'searchAnomalyRegions', { catCode: 'I2', grade: '중점검토' }, ['음식'], []],
   ['M01', '목동이랑 대흥동 식당 비교 좀', 'compareRegions', { catCode: 'I2' }, ['목동', '대흥동'], []],
   ['M02', '음식점 안조은 동내 알려줘', 'searchAnomalyRegions', { catCode: 'I2' }, [], []],
+  ['N01', '이번 분기에 먼저 살펴볼 지역을 알려줘', 'searchAnomalyRegions', {}, ['우선'], ['폐업률', '폐업 확률']],
+  ['N02', '판암1동의 최근 이상징후 근거를 보여줘', 'getRegionDetail', { dongCode: '30110551' }, ['판암1동'], ['폐업률', '폐업 확률']],
+  ['N03', '목동 음식업과 대전 전체 흐름을 비교해줘', 'getRegionDetail', { dongCode: '30140550' }, ['목동', '음식'], ['폐업률', '폐업 확률']],
+  ['N04', '목동에서 최근 흐름이 좋은 업종과 정책 검토 방향을 알려줘', 'getRegionDetail', { dongCode: '30140550' }, ['성장 모멘텀', '정책 검토'], ['정책 효과가 있습니다', '지원 대상으로 결정']],
 ]
 
 const started = Date.now()

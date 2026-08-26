@@ -112,7 +112,7 @@ function HomePage() {
             <small>행정동 분석</small>
           </div>
           <div className="home-hero__visual-footer">
-            <span><i className="status-dot" /> 분석 준비</span>
+            <span><i className="status-dot" /> 최신 분석 반영</span>
             <span>상대 비교 기반</span>
           </div>
         </div>

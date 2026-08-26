@@ -30,6 +30,15 @@ class AiCostControlServiceTest {
     }
 
     @Test
+    void temporarilyBlocksModelCallsAfterProviderQuotaFailure() {
+        AiCostControlService service = service(10, 10);
+
+        service.blockModelCalls(Duration.ofMinutes(1));
+
+        assertThat(service.allowModelCall()).isFalse();
+    }
+
+    @Test
     void cachesIdenticalNormalizedQuestions() {
         AiCostControlService service = service(10, 10);
         AiChatResponse response = AiChatResponse.llm("답변", List.of(), 0);

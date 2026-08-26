@@ -295,7 +295,7 @@ public class AiFallbackService {
                     .append(item.consecutiveDecline() ? ", 최근 2분기 연속 감소" : "")
                     .append("\n");
             }
-            sb.append("등급과 Score는 절대 위험도가 아니라 대전 내 상대적 검토 우선순위입니다. ")
+            sb.append("등급과 점수는 절대 위험도가 아니라 대전 내 상대적 검토 우선순위입니다. ")
                 .append("점포 수 감소가 개별 점포의 폐업을 의미하지 않습니다.");
             return AiChatResponse.fallback(sb.toString(), citations);
         } catch (RuntimeException exception) {
@@ -452,7 +452,7 @@ public class AiFallbackService {
         StringBuilder sb = new StringBuilder();
         sb.append(category.canonical()).append(" 업종(코드 ").append(category.catCode()).append(")의 이상징후 상위 지역입니다. ");
         if (response.items() != null && !response.items().isEmpty()) {
-            sb.append("Top ").append(response.items().size()).append(": ");
+            sb.append("상위 ").append(response.items().size()).append("개: ");
             for (int i = 0; i < response.items().size(); i++) {
                 var item = response.items().get(i);
                 if (i > 0) sb.append(", ");

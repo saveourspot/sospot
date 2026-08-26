@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.example.sospot.ai.dto.AiChatResponse;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -24,6 +25,7 @@ public class AiCostControlService {
 
     private LocalDate modelCallDate = LocalDate.now(SERVICE_ZONE);
     private int modelCallsToday;
+    private Instant modelCallsBlockedUntil = Instant.EPOCH;
 
     public AiCostControlService(AiUsageProperties properties) {
         this.properties = properties;
@@ -61,6 +63,9 @@ public class AiCostControlService {
     }
 
     public synchronized boolean allowModelCall() {
+        if (Instant.now().isBefore(modelCallsBlockedUntil)) {
+            return false;
+        }
         LocalDate today = LocalDate.now(SERVICE_ZONE);
         if (!today.equals(modelCallDate)) {
             modelCallDate = today;
@@ -71,6 +76,13 @@ public class AiCostControlService {
         }
         modelCallsToday++;
         return true;
+    }
+
+    public synchronized void blockModelCalls(Duration duration) {
+        Instant candidate = Instant.now().plus(duration);
+        if (candidate.isAfter(modelCallsBlockedUntil)) {
+            modelCallsBlockedUntil = candidate;
+        }
     }
 
     private String cacheKey(String question) {
