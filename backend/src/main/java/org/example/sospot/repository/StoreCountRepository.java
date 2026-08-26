@@ -14,6 +14,8 @@ public interface StoreCountRepository extends JpaRepository<StoreCount, StoreCou
 
   List<StoreCount> findByCatCodeAndPeriodId(String catCode, String periodId);
 
+  List<StoreCount> findByPeriodIdAndCatLevel(String periodId, String catLevel);
+
   @Query("""
       select sum(count.storeCount)
       from StoreCount count

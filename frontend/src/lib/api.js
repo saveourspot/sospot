@@ -56,6 +56,16 @@ export async function getBsi(periodMonth) {
   return response.data
 }
 
+export async function getCommercialBenchmarks(dongCode, period) {
+  const response = await apiClient.get(
+    `/regions/${encodeURIComponent(dongCode)}/commercial-benchmarks`,
+    {
+      params: withOptionalPeriod(period),
+    },
+  )
+  return response.data
+}
+
 export async function getSelectedCategoryScores(catCodes, period) {
   const response = await apiClient.get('/anomaly/regions/selected-scores', {
     params: {

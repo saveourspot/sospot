@@ -7,7 +7,7 @@ import Loading from '../components/Loading.jsx'
 import RelativeGapChart from '../components/RelativeGapChart.jsx'
 import RegionHeader from '../components/RegionHeader.jsx'
 import TrendChart from '../components/TrendChart.jsx'
-import { getBsi, getRegionDetail } from '../lib/api.js'
+import { getBsi, getCommercialBenchmarks, getRegionDetail } from '../lib/api.js'
 import { formatPeriod } from '../lib/periodFormat.js'
 
 function formatPeriodLabel(period, comparisonPeriods = []) {
@@ -35,6 +35,8 @@ function RegionDetailPage() {
   const { dongCode } = useParams()
   const [detailEnvelope, setDetailEnvelope] = useState(null)
   const [bsi, setBsi] = useState(null)
+  const [commercialBenchmarks, setCommercialBenchmarks] = useState([])
+  const [benchmarkLoading, setBenchmarkLoading] = useState(false)
   const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
 
@@ -44,6 +46,8 @@ function RegionDetailPage() {
     async function loadRegion() {
       setDetailEnvelope(null)
       setBsi(null)
+      setCommercialBenchmarks([])
+      setBenchmarkLoading(true)
       setError('')
 
       const [detailResult, bsiResult] = await Promise.allSettled([
@@ -71,6 +75,20 @@ function RegionDetailPage() {
       setDetailEnvelope(detailResult.value)
       if (bsiResult.status === 'fulfilled') {
         setBsi(bsiResult.value?.data ?? null)
+      }
+
+      try {
+        const benchmarkEnvelope = await getCommercialBenchmarks(
+          dongCode,
+          detailResult.value.period,
+        )
+        if (!ignore) {
+          setCommercialBenchmarks(benchmarkEnvelope?.data?.benchmarkRegions ?? [])
+        }
+      } catch {
+        if (!ignore) setCommercialBenchmarks([])
+      } finally {
+        if (!ignore) setBenchmarkLoading(false)
       }
     }
 
@@ -205,6 +223,22 @@ function RegionDetailPage() {
         </p>
       </section>
 
+      <section className="relative-gap-section" aria-labelledby="relative-gap-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">대전 전체 대비</p>
+            <h2 id="relative-gap-heading">업종별 상대격차</h2>
+          </div>
+          <p className="period-label">유효 대분류 {validRelativeGaps.length}개</p>
+        </div>
+        <p className="section-description">
+          음수는 해당 지역의 점포 수 변화가 대전 전체 동일 업종보다 상대적으로
+          낮았음을 의미합니다. 상대격차는 두 증감률의 차이이므로 퍼센트가 아닌
+          퍼센트포인트(%p)로 표시합니다.
+        </p>
+        <RelativeGapChart categories={validRelativeGaps} />
+      </section>
+
       <section className="top-anomalies" aria-labelledby="top-anomalies-heading">
         <div className="section-heading">
           <div>
@@ -256,20 +290,80 @@ function RegionDetailPage() {
         </p>
       </section>
 
-      <section className="relative-gap-section" aria-labelledby="relative-gap-heading">
+      <section className="commercial-benchmarks" aria-labelledby="commercial-benchmarks-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">대전 전체 대비</p>
-            <h2 id="relative-gap-heading">업종별 상대격차</h2>
+            <p className="eyebrow">유사 상권 벤치마킹</p>
+            <h2 id="commercial-benchmarks-heading">비슷한 상권 중 상대적으로 양호한 지역</h2>
           </div>
-          <p className="period-label">유효 대분류 {validRelativeGaps.length}개</p>
+          <p className="period-label">대분류 업종 구성 기준</p>
         </div>
         <p className="section-description">
-          음수는 해당 지역의 점포 수 변화가 대전 전체 동일 업종보다 상대적으로
-          낮았음을 의미합니다. 상대격차는 두 증감률의 차이이므로 퍼센트가 아닌
-          퍼센트포인트(%p)로 표시합니다.
+          업종별 점포 구성 비율이 비슷한 행정동을 찾고, 그중 상대격차가 더 높은
+          업종과 선택 지역에 접목하기 전에 확인할 사항을 보여줍니다.
         </p>
-        <RelativeGapChart categories={validRelativeGaps} />
+        {benchmarkLoading ? (
+          <Loading message="상권 유형이 비슷한 지역의 업종 흐름을 비교하고 있습니다." />
+        ) : commercialBenchmarks.length > 0 ? (
+          <div className="commercial-benchmark-grid">
+            {commercialBenchmarks.map((benchmark) => (
+              <article key={benchmark.dongCode} className="commercial-benchmark-card">
+                <div className="commercial-benchmark-card__heading">
+                  <div>
+                    <span>{benchmark.sigungu}</span>
+                    <h3>{benchmark.dongName}</h3>
+                  </div>
+                  <p>상권 구성 유사도 {benchmark.commercialMixSimilarity}%</p>
+                </div>
+                <p className="commercial-benchmark-card__summary">
+                  {header.dongName}보다 상대격차가 높은 유효 업종{' '}
+                  <strong>{benchmark.advantageCategoryCount}개</strong>
+                </p>
+                <div className="benchmark-category-list">
+                  {benchmark.advantageCategories.map((category) => (
+                    <div key={category.catCode} className="benchmark-category">
+                      <div className="benchmark-category__title">
+                        <strong>{category.catName}</strong>
+                        <span>
+                          격차 {formatPercentPoint(category.relativeGapDifference)}
+                        </span>
+                      </div>
+                      <div className="benchmark-category__comparison">
+                        <div>
+                          <span>{header.dongName}</span>
+                          <strong>{formatPercentPoint(category.targetRelativeGap)}</strong>
+                          <small>
+                            {(category.targetStoreCounts ?? []).map((point) => point.count).join(' → ')}개
+                          </small>
+                        </div>
+                        <div>
+                          <span>{benchmark.dongName}</span>
+                          <strong>{formatPercentPoint(category.benchmarkRelativeGap)}</strong>
+                          <small>
+                            {(category.benchmarkStoreCounts ?? []).map((point) => point.count).join(' → ')}개
+                          </small>
+                        </div>
+                      </div>
+                      <h4>접목 전 확인할 사항</h4>
+                      <ul>
+                        {category.applicationDirections.map((direction) => (
+                          <li key={direction}>{direction}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty message="현재 기준에서 비교 가능한 유사 상권 우위 지역이 없습니다." />
+        )}
+        <p className="commercial-benchmarks__notice">
+          유사도는 최신 분기의 대분류 업종별 점포 구성으로 계산합니다. 상대격차가
+          높다는 사실만으로 성장 원인이나 정책 효과를 단정할 수 없으며, 우위 지역의
+          사례를 그대로 복제하지 말고 입지·고객층·주변 업종 차이를 먼저 확인해야 합니다.
+        </p>
       </section>
 
       <section className="excluded-categories" aria-labelledby="excluded-heading">

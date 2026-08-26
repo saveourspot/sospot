@@ -207,14 +207,13 @@ class ComputeScoresTest(unittest.TestCase):
         # D05: P_rd=20, P_cum=20, C=0 → 0.5*20+0.3*20+0 = 16 → 정상
         self.assertEqual(grades_by_dong["D05"], "정상")
 
-    def test_grade_boundary_scores_fall_to_lower_band(self) -> None:
+    def test_grade_boundary_scores_are_inclusive(self) -> None:
         # 임계값 정확히 걸리는 점수는 아래 등급으로 분류돼야 §1.5 검증 재현이 가능하다.
-        self.assertEqual(_grade_for_score(80.0), "주의")
-        self.assertEqual(_grade_for_score(80.001), "중점검토")
-        self.assertEqual(_grade_for_score(65.0), "관심")
-        self.assertEqual(_grade_for_score(65.001), "주의")
-        self.assertEqual(_grade_for_score(50.0), "정상")
-        self.assertEqual(_grade_for_score(50.001), "관심")
+        self.assertEqual(_grade_for_score(80.0), "중점검토")
+        self.assertEqual(_grade_for_score(79.999), "주의")
+        self.assertEqual(_grade_for_score(65.0), "주의")
+        self.assertEqual(_grade_for_score(64.999), "관심")
+        self.assertEqual(_grade_for_score(50.0), "관심")
         self.assertEqual(_grade_for_score(49.999), "정상")
         self.assertIsNone(_grade_for_score(float("nan")))
 

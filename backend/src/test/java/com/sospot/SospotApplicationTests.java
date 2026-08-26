@@ -214,6 +214,32 @@ class SospotApplicationTests {
   }
 
   @Test
+  void commercialBenchmarksReturnComparableRegionsAndEvidence() {
+    var response = regionDetailService.getCommercialBenchmarks("30110551", "202606");
+
+    assertThat(response.period()).isEqualTo("202606");
+    assertThat(response.comparisonPeriods()).containsExactly("202512", "202603", "202606");
+    assertThat(response.data().benchmarkRegions()).hasSize(2)
+        .allSatisfy(
+            region -> {
+              assertThat(region.dongCode()).isNotEqualTo("30110551");
+              assertThat(region.commercialMixSimilarity()).isBetween(
+                  new java.math.BigDecimal("0.0"), new java.math.BigDecimal("100.0"));
+              assertThat(region.advantageCategoryCount())
+                  .isGreaterThanOrEqualTo(region.advantageCategories().size());
+              assertThat(region.advantageCategories()).hasSizeBetween(1, 2)
+                  .allSatisfy(
+                      category -> {
+                        assertThat(category.relativeGapDifference()).isPositive();
+                        assertThat(category.benchmarkRelativeGap())
+                            .isGreaterThan(category.targetRelativeGap());
+                        assertThat(category.applicationDirections()).hasSize(3)
+                            .allMatch(direction -> !direction.contains("성공 사례"));
+                      });
+            });
+  }
+
+  @Test
   void selectedCategoryScoresExcludeLowSamplesAndRankDongs() {
     var result = anomalyRegionService.selectedScores("202606", "I2,G2");
 

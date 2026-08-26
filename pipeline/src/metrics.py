@@ -254,9 +254,7 @@ def _grade_for_score(score: float) -> str | None:
     if pd.isna(score):
         return None
     for threshold, grade in GRADE_THRESHOLDS:
-        # 임계값 정확히 걸리는 점수는 아래 등급으로 취급. 검증 기대값
-        # (§1.5) 관심 119 / 정상 382 재현을 위해 필요.
-        if score > threshold:
+        if score >= threshold:
             return grade
     return GRADE_DEFAULT
 

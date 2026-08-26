@@ -9,6 +9,10 @@ function MapLegend() {
           <li key={grade}>
             <span style={{ backgroundColor: GRADE_COLORS[grade] }} />
             {grade}
+            {grade === '중점검토' && ' (90 이상)'}
+            {grade === '주의' && ' (70 이상)'}
+            {grade === '관심' && ' (40 이상)'}
+            {grade === '정상' && ' (40 미만)'}
           </li>
         ))}
         <li>

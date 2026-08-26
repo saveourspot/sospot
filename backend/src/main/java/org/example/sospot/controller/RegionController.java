@@ -1,6 +1,7 @@
 package org.example.sospot.controller;
 
 import org.example.sospot.dto.ApiEnvelope;
+import org.example.sospot.dto.CommercialBenchmarkResponse;
 import org.example.sospot.dto.RegionComparisonResponse;
 import org.example.sospot.dto.RegionDetailResponse;
 import org.example.sospot.service.RegionComparisonService;
@@ -37,5 +38,12 @@ public class RegionController {
   public ApiEnvelope<RegionDetailResponse> getDetail(
       @PathVariable String dongCode, @RequestParam(required = false) String period) {
     return regionDetailService.getDetail(dongCode, period);
+  }
+
+  @GetMapping("/{dongCode}/commercial-benchmarks")
+  public ApiEnvelope<CommercialBenchmarkResponse> getCommercialBenchmarks(
+      @PathVariable String dongCode,
+      @RequestParam(required = false) String period) {
+    return regionDetailService.getCommercialBenchmarks(dongCode, period);
   }
 }

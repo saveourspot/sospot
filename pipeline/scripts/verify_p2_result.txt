@@ -16,8 +16,8 @@ Category anomaly (MAJOR, sample_size_flag=OK)
 - valid combinations: 604
 - 중점검토: 32
 - 주의: 71
-- 관심: 119
-- 정상: 382
+- 관심: 120
+- 정상: 381
 
 Dong composite score
 - dongs: 82

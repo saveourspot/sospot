@@ -3,6 +3,9 @@ package org.example.sospot.service;
 import java.util.List;
 import java.util.Map;
 import java.util.Comparator;
+import java.math.BigDecimal;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.example.sospot.domain.Anomaly;
@@ -11,6 +14,7 @@ import org.example.sospot.domain.Dong;
 import org.example.sospot.domain.DongScore;
 import org.example.sospot.domain.StoreCount;
 import org.example.sospot.dto.ApiEnvelope;
+import org.example.sospot.dto.CommercialBenchmarkResponse;
 import org.example.sospot.dto.RegionDetailResponse;
 import org.example.sospot.repository.AnomalyRepository;
 import org.example.sospot.repository.CategoryRepository;
@@ -182,6 +186,179 @@ public class RegionDetailService {
         anomaly.getRelativeGap(),
         anomaly.getCumChangeRate(),
         anomaly.getConsecutiveDecline());
+  }
+
+  public ApiEnvelope<CommercialBenchmarkResponse> getCommercialBenchmarks(
+      String dongCode, String requestedPeriod) {
+    Dong targetDong =
+        dongRepository
+            .findById(dongCode)
+            .orElseThrow(
+                () ->
+                    new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "지원하는 대전 행정동을 찾을 수 없습니다."));
+    String period = analysisPeriodService.resolve(requestedPeriod);
+    List<String> comparisonPeriods = analysisPeriodService.comparisonPeriods(period);
+    Map<String, Category> categories =
+        categoryRepository.findByCatLevelOrderByCatCodeAsc(MAJOR).stream()
+            .collect(Collectors.toMap(Category::getCatCode, Function.identity()));
+    List<StoreCount> latestCounts = storeCountRepository.findByPeriodIdAndCatLevel(period, MAJOR);
+    Map<String, Map<String, Integer>> commercialMix =
+        latestCounts.stream()
+            .collect(
+                Collectors.groupingBy(
+                    StoreCount::getDongCode,
+                    Collectors.toMap(StoreCount::getCatCode, StoreCount::getStoreCount)));
+    Map<String, Integer> targetMix = commercialMix.get(dongCode);
+    if (targetMix == null) {
+      return new ApiEnvelope<>(
+          period, comparisonPeriods, new CommercialBenchmarkResponse(List.of()));
+    }
+
+    Map<String, Anomaly> targetAnomalies =
+        anomalyRepository
+            .findByDongCodeAndPeriodIdAndCatLevelOrderByScoreDesc(dongCode, period, MAJOR)
+            .stream()
+            .filter(anomaly -> SAMPLE_OK.equals(anomaly.getSampleSizeFlag()))
+            .collect(Collectors.toMap(Anomaly::getCatCode, Function.identity()));
+    Map<String, Map<String, Anomaly>> anomaliesByDong =
+        anomalyRepository.findByPeriodIdAndCatLevelAndCatCodeIn(period, MAJOR, categories.keySet())
+            .stream()
+            .filter(anomaly -> SAMPLE_OK.equals(anomaly.getSampleSizeFlag()))
+            .collect(
+                Collectors.groupingBy(
+                    Anomaly::getDongCode,
+                    Collectors.toMap(Anomaly::getCatCode, Function.identity())));
+    Map<String, Dong> dongs =
+        dongRepository.findAll().stream()
+            .collect(Collectors.toMap(Dong::getDongCode, Function.identity()));
+
+    List<CommercialBenchmarkResponse.BenchmarkRegion> similarRegions =
+        commercialMix.entrySet().stream()
+            .filter(entry -> !entry.getKey().equals(dongCode))
+            .map(
+                entry ->
+                    buildBenchmarkRegion(
+                        targetDong,
+                        dongs.get(entry.getKey()),
+                        targetMix,
+                        entry.getValue(),
+                        targetAnomalies,
+                        anomaliesByDong.getOrDefault(entry.getKey(), Map.of()),
+                        categories,
+                        comparisonPeriods))
+            .filter(Objects::nonNull)
+            .sorted(
+                Comparator.comparing(
+                    CommercialBenchmarkResponse.BenchmarkRegion::commercialMixSimilarity,
+                    Comparator.reverseOrder()))
+            .limit(15)
+            .toList();
+    List<CommercialBenchmarkResponse.BenchmarkRegion> benchmarks =
+        similarRegions.stream()
+            .sorted(
+                Comparator.comparingInt(
+                        CommercialBenchmarkResponse.BenchmarkRegion::advantageCategoryCount)
+                    .reversed()
+                    .thenComparing(
+                        CommercialBenchmarkResponse.BenchmarkRegion::commercialMixSimilarity,
+                        Comparator.reverseOrder()))
+            .limit(2)
+            .toList();
+    return new ApiEnvelope<>(
+        period, comparisonPeriods, new CommercialBenchmarkResponse(benchmarks));
+  }
+
+  private CommercialBenchmarkResponse.BenchmarkRegion buildBenchmarkRegion(
+      Dong targetDong,
+      Dong benchmarkDong,
+      Map<String, Integer> targetMix,
+      Map<String, Integer> benchmarkMix,
+      Map<String, Anomaly> targetAnomalies,
+      Map<String, Anomaly> benchmarkAnomalies,
+      Map<String, Category> categories,
+      List<String> comparisonPeriods) {
+    if (benchmarkDong == null) return null;
+    BigDecimal similarity = commercialMixSimilarity(targetMix, benchmarkMix, categories.keySet());
+    List<CommercialBenchmarkResponse.AdvantageCategory> advantages =
+        categories.values().stream()
+            .map(
+                category ->
+                    buildAdvantageCategory(
+                        targetDong,
+                        benchmarkDong,
+                        category,
+                        targetAnomalies.get(category.getCatCode()),
+                        benchmarkAnomalies.get(category.getCatCode()),
+                        comparisonPeriods))
+            .filter(Objects::nonNull)
+            .sorted(
+                Comparator.comparing(
+                    CommercialBenchmarkResponse.AdvantageCategory::relativeGapDifference,
+                    Comparator.reverseOrder()))
+            .toList();
+    if (advantages.isEmpty()) return null;
+    return new CommercialBenchmarkResponse.BenchmarkRegion(
+        benchmarkDong.getDongCode(),
+        benchmarkDong.getDongName(),
+        benchmarkDong.getSigungu(),
+        similarity,
+        advantages.size(),
+        advantages.stream().limit(2).toList());
+  }
+
+  private CommercialBenchmarkResponse.AdvantageCategory buildAdvantageCategory(
+      Dong targetDong,
+      Dong benchmarkDong,
+      Category category,
+      Anomaly target,
+      Anomaly benchmark,
+      List<String> comparisonPeriods) {
+    if (target == null
+        || benchmark == null
+        || target.getRelativeGap() == null
+        || benchmark.getRelativeGap() == null
+        || benchmark.getRelativeGap().compareTo(target.getRelativeGap()) <= 0) {
+      return null;
+    }
+    BigDecimal difference = benchmark.getRelativeGap().subtract(target.getRelativeGap());
+    return new CommercialBenchmarkResponse.AdvantageCategory(
+        category.getCatCode(),
+        category.getCatName(),
+        buildStoreCountPoints(targetDong.getDongCode(), category.getCatCode(), comparisonPeriods),
+        buildStoreCountPoints(benchmarkDong.getDongCode(), category.getCatCode(), comparisonPeriods),
+        target.getGrowthRate(),
+        benchmark.getGrowthRate(),
+        target.getRelativeGap(),
+        benchmark.getRelativeGap(),
+        difference,
+        benchmarkApplicationDirections(
+            targetDong.getDongName(), benchmarkDong.getDongName(), category.getCatName()));
+  }
+
+  private BigDecimal commercialMixSimilarity(
+      Map<String, Integer> left, Map<String, Integer> right, Set<String> categoryCodes) {
+    double dot = 0;
+    double leftNorm = 0;
+    double rightNorm = 0;
+    for (String catCode : categoryCodes) {
+      double leftValue = left.getOrDefault(catCode, 0);
+      double rightValue = right.getOrDefault(catCode, 0);
+      dot += leftValue * rightValue;
+      leftNorm += leftValue * leftValue;
+      rightNorm += rightValue * rightValue;
+    }
+    double similarity =
+        leftNorm == 0 || rightNorm == 0 ? 0 : dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
+    return BigDecimal.valueOf(similarity * 100).setScale(1, java.math.RoundingMode.HALF_UP);
+  }
+
+  private List<String> benchmarkApplicationDirections(
+      String targetDongName, String benchmarkDongName, String categoryName) {
+    return List.of(
+        benchmarkDongName + "에서 " + categoryName + " 점포의 입지·고객층·주변 업종 특징을 현장 확인",
+        benchmarkDongName + "과 " + targetDongName + "의 입지·고객층·주변 업종 구성을 비교",
+        targetDongName + "에 적용 가능한 요소만 소규모로 시험하고 다음 분기 변화를 재확인");
   }
 
   private RegionDetailResponse.GrowthMomentum toGrowthMomentum(
