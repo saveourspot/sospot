@@ -127,6 +127,20 @@ class SospotApplicationTests {
         .containsExactly(123, 121, 117);
     assertThat(mokdong.data().topAnomalies().get(0).relativeGap())
         .isEqualByComparingTo("-0.06307");
+    assertThat(mokdong.data().majorRelativeGaps())
+        .anySatisfy(
+            category -> {
+              assertThat(category.growthRate()).isNotNull();
+              assertThat(category.cityGrowthRate()).isNotNull();
+            });
+    assertThat(mokdong.data().growthMomentum()).hasSizeLessThanOrEqualTo(3)
+        .allSatisfy(
+            momentum -> {
+              assertThat(momentum.momentumType())
+                  .isIn("지속 성장형", "회복 전환형", "상대 우위형", "최근 증가형");
+              assertThat(momentum.reviewDirections()).hasSize(3);
+              assertThat(momentum.caution()).contains("정책 효과를 단정할 수 없어");
+            });
     assertThat(mokdong.data().trend().series()).hasSize(3);
   }
 
@@ -197,6 +211,50 @@ class SospotApplicationTests {
     assertThatThrownBy(() -> categoryTrendService.getTrend("I2", "dong", null, null))
         .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
         .hasMessageContaining("400 BAD_REQUEST");
+  }
+
+  @Test
+  void selectedCategoryScoresExcludeLowSamplesAndRankDongs() {
+    var result = anomalyRegionService.selectedScores("202606", "I2,G2");
+
+    assertThat(result.period()).isEqualTo("202606");
+    assertThat(result.data().items()).hasSize(82);
+    assertThat(result.data().items())
+        .allSatisfy(
+            item -> {
+              assertThat(item.selectedCategoryCount()).isEqualTo(2);
+              assertThat(item.validCategoryCount()).isBetween(0, 2);
+              if (item.validCategoryCount() == 0) {
+                assertThat(item.sampleSizeFlag()).isEqualTo("LOW");
+                assertThat(item.score()).isNull();
+                assertThat(item.grade()).isNull();
+              } else {
+                assertThat(item.sampleSizeFlag()).isEqualTo("OK");
+                assertThat(item.rawScore()).isNotNull();
+                assertThat(item.score()).isNotNull();
+                assertThat(item.grade()).isIn("정상", "관심", "주의", "중점검토");
+              }
+            });
+  }
+
+  @Test
+  void selectingAllMajorCategoriesMatchesStoredDongScores() {
+    var selected = anomalyRegionService.selectedScores("202606", "G2,I1,I2,L1,M1,N1,P1,Q1,R1,S2");
+    var stored = regionScoreService.getScores("202606");
+
+    assertThat(selected.data().items()).hasSize(82);
+    assertThat(selected.data().items())
+        .allSatisfy(
+            item -> {
+              var storedItem =
+                  stored.data().items().stream()
+                      .filter(candidate -> candidate.dongCode().equals(item.dongCode()))
+                      .findFirst()
+                      .orElseThrow();
+              assertThat(item.score()).isEqualByComparingTo(storedItem.pctScore());
+              assertThat(item.rawScore()).isEqualByComparingTo(storedItem.rawScore());
+              assertThat(item.grade()).isEqualTo(storedItem.grade());
+            });
   }
 
   @Test

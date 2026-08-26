@@ -5,6 +5,7 @@ const RECOMMENDED_QUESTIONS = [
   '이번 분기에 먼저 살펴볼 지역을 알려줘',
   '판암1동의 최근 이상징후 근거를 보여줘',
   '목동 음식업과 대전 전체 흐름을 비교해줘',
+  '목동에서 최근 흐름이 좋은 업종과 정책 검토 방향을 알려줘',
 ]
 
 function renderInlineMarkdown(text) {
@@ -212,7 +213,7 @@ function AiPromptBox() {
           <article className="ai-answer">
             <div className="ai-answer__heading">
               <strong>답변</strong>
-              <span>{response.mode === 'llm' ? 'AI 응답' : '기본 서술'}</span>
+              <span>{response.mode === 'llm' ? 'AI 응답' : 'API 기반 안내'}</span>
             </div>
             <MarkdownAnswer>{response.answer}</MarkdownAnswer>
             {response.toolCalls?.length > 0 && (

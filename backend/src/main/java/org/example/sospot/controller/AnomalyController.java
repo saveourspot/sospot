@@ -2,6 +2,7 @@ package org.example.sospot.controller;
 
 import org.example.sospot.dto.AnomalyRegionsResponse;
 import org.example.sospot.dto.ApiEnvelope;
+import org.example.sospot.dto.SelectedCategoryScoresResponse;
 import org.example.sospot.service.AnomalyRegionService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,5 +30,12 @@ public class AnomalyController {
       @RequestParam(defaultValue = "100") Integer topN) {
     return anomalyRegionService.search(
         period, catCode, catLevel, grade, consecutiveDecline, sortBy, topN);
+  }
+
+  @GetMapping("/selected-scores")
+  public ApiEnvelope<SelectedCategoryScoresResponse> selectedScores(
+      @RequestParam(required = false) String period,
+      @RequestParam String catCodes) {
+    return anomalyRegionService.selectedScores(period, catCodes);
   }
 }

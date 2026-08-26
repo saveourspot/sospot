@@ -5,7 +5,7 @@ import GradeBadge from './GradeBadge.jsx'
 
 const gradeRank = new Map(GRADE_ORDER.map((grade, index) => [grade, index]))
 
-function RegionList({ regions, highlightedDongCode, onHighlight }) {
+function RegionList({ regions, highlightedDongCode, onHighlight, emptyMessage }) {
   const itemRefs = useRef(new Map())
   const sortedRegions = [...regions].sort((left, right) => {
     const gradeDifference =
@@ -33,7 +33,9 @@ function RegionList({ regions, highlightedDongCode, onHighlight }) {
         <span>분석 결과</span>
       </div>
       {sortedRegions.length === 0 ? (
-        <p className="region-list-panel__empty">선택된 자치구가 없습니다.</p>
+        <p className="region-list-panel__empty">
+          {emptyMessage ?? '선택된 자치구가 없습니다.'}
+        </p>
       ) : (
         <ol className="region-list">
           {sortedRegions.map((region) => {

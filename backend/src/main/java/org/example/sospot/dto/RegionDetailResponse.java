@@ -7,6 +7,7 @@ public record RegionDetailResponse(
     Header header,
     List<TopAnomaly> topAnomalies,
     List<RelativeGap> majorRelativeGaps,
+    List<GrowthMomentum> growthMomentum,
     List<ExcludedCategory> excluded,
     Trend trend) {
 
@@ -38,9 +39,22 @@ public record RegionDetailResponse(
   public record RelativeGap(
       String categoryCode,
       String categoryName,
+      BigDecimal growthRate,
+      BigDecimal cityGrowthRate,
       BigDecimal relativeGap,
       String grade,
       String sampleSizeFlag) {}
+
+  public record GrowthMomentum(
+      String catCode,
+      String catName,
+      String momentumType,
+      List<StoreCountPoint> storeCounts,
+      BigDecimal growthRate,
+      BigDecimal cityGrowthRate,
+      BigDecimal relativeGap,
+      List<String> reviewDirections,
+      String caution) {}
 
   public record ExcludedCategory(
       String catCode, String catName, int storeCount, String reason, String sampleSizeFlag) {}

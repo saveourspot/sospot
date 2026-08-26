@@ -26,7 +26,8 @@ public class GetRegionDetailTool implements AiTool {
             "name", name(),
             "description",
                 "특정 행정동의 상세 분석 결과를 반환합니다. "
-                + "이상 업종 TOP 카드, 지역/대전 추세, 판정 제외 업종을 포함합니다.",
+                + "이상 업종, 지역/대전 추세, 성장 모멘텀 유형, 근거 수치, "
+                + "정책 검토 체크리스트와 판정 제외 업종을 포함합니다.",
             "parameters", Map.of(
                 "type", "OBJECT",
                 "properties", Map.of(

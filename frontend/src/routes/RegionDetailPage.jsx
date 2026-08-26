@@ -25,6 +25,12 @@ function formatPercentPoint(value) {
   return `${numericValue > 0 ? '+' : ''}${(numericValue * 100).toFixed(1)}%p`
 }
 
+function formatPercent(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return '데이터 없음'
+  return `${numericValue > 0 ? '+' : ''}${(numericValue * 100).toFixed(1)}%`
+}
+
 function RegionDetailPage() {
   const { dongCode } = useParams()
   const [detailEnvelope, setDetailEnvelope] = useState(null)
@@ -94,7 +100,14 @@ function RegionDetailPage() {
   }
 
   const { period, comparisonPeriods, data } = detailEnvelope
-  const { header, topAnomalies = [], majorRelativeGaps = [], excluded = [], trend } = data
+  const {
+    header,
+    topAnomalies = [],
+    majorRelativeGaps = [],
+    growthMomentum = [],
+    excluded = [],
+    trend,
+  } = data
   const validRelativeGaps = majorRelativeGaps
     .filter(
       (category) =>
@@ -139,6 +152,57 @@ function RegionDetailPage() {
         <span>
           이 지표는 미래를 예측하거나 정책지원 대상을 자동 결정하지 않습니다.
         </span>
+      </section>
+
+      <section className="positive-changes" aria-labelledby="positive-changes-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">함께 확인할 변화</p>
+            <h2 id="positive-changes-heading">성장 모멘텀과 정책 검토 방향</h2>
+          </div>
+          <p className="period-label">최대 3개 업종</p>
+        </div>
+        <p className="section-description">
+          최근 증가 또는 대전 대비 상대적으로 양호한 업종을 유형화하고, 다음
+          단계에서 확인할 수 있는 정책 검토 항목을 제시합니다.
+        </p>
+        {growthMomentum.length > 0 ? (
+          <div className="positive-change-grid">
+            {growthMomentum.map((momentum) => (
+              <article key={momentum.catCode} className="positive-change-card">
+                <div className="positive-change-card__heading">
+                  <strong>{momentum.catName}</strong>
+                  <span>{momentum.momentumType}</span>
+                </div>
+                <p className="positive-change-card__counts">
+                  {(momentum.storeCounts ?? []).map((point) => point.count).join(' → ')}개
+                </p>
+                <dl>
+                  <div>
+                    <dt>최근 지역 증감률</dt>
+                    <dd>{formatPercent(momentum.growthRate)}</dd>
+                  </div>
+                  <div>
+                    <dt>대전 대비 상대격차</dt>
+                    <dd>{formatPercentPoint(momentum.relativeGap)}</dd>
+                  </div>
+                </dl>
+                <h3>정책 검토 체크리스트</h3>
+                <ul>
+                  {(momentum.reviewDirections ?? []).map((direction) => (
+                    <li key={direction}>{direction}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty message="현재 기준에서 표시할 성장 모멘텀 업종이 없습니다." />
+        )}
+        <p className="positive-changes__notice">
+          점포 수 변화만으로 성장 원인이나 정책 효과를 단정할 수 없어 현장 자료
+          확인이 필요합니다.
+        </p>
       </section>
 
       <section className="top-anomalies" aria-labelledby="top-anomalies-heading">
@@ -202,7 +266,8 @@ function RegionDetailPage() {
         </div>
         <p className="section-description">
           음수는 해당 지역의 점포 수 변화가 대전 전체 동일 업종보다 상대적으로
-          낮았음을 의미합니다.
+          낮았음을 의미합니다. 상대격차는 두 증감률의 차이이므로 퍼센트가 아닌
+          퍼센트포인트(%p)로 표시합니다.
         </p>
         <RelativeGapChart categories={validRelativeGaps} />
       </section>
@@ -233,26 +298,6 @@ function RegionDetailPage() {
         )}
       </section>
 
-      <section className="later-features" aria-labelledby="later-features-heading">
-        <div>
-          <p className="eyebrow">후순위 기능</p>
-          <h2 id="later-features-heading">추가 분석 화면</h2>
-          <p>
-            핵심 MVP 완성 후 업종 분석과 지역 비교 전용 화면을 순차적으로
-            준비합니다.
-          </p>
-        </div>
-        <div className="later-features__items">
-          <div aria-disabled="true">
-            <strong>업종 분석</strong>
-            <span>F3 · 준비 중</span>
-          </div>
-          <div aria-disabled="true">
-            <strong>지역 비교</strong>
-            <span>F4 · 준비 중</span>
-          </div>
-        </div>
-      </section>
     </main>
   )
 }

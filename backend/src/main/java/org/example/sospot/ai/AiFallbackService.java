@@ -383,33 +383,43 @@ public class AiFallbackService {
     ) {
         var header = detail.header();
         StringBuilder sb = new StringBuilder();
-        sb.append(region.sigungu()).append(" ").append(header.dongName())
-          .append("은(는) 기준 분기(").append(formatPeriod(period)).append(") 등급 ")
-          .append(header.grade())
-          .append(", 대전 82개 행정동 중 ")
-          .append(header.rank())
-          .append("위입니다. ");
+        sb.append("## ").append(header.dongName()).append(" 분석 요약\n\n")
+          .append("- **기준 분기:** ").append(formatPeriod(period)).append("\n")
+          .append("- **행정동 등급:** ").append(header.grade())
+          .append(" — 대전 82개 행정동 중 ").append(header.rank()).append("위\n");
         if (detail.topAnomalies() != null && !detail.topAnomalies().isEmpty()) {
             var top = detail.topAnomalies().get(0);
-            sb.append("가장 두드러진 이상 업종은 ")
-              .append(top.catName())
-              .append("이며, Score ")
-              .append(top.score())
-              .append(", 상대격차 ")
-              .append(formatPercentPoint(top.relativeGap()))
-              .append("입니다. ");
+            sb.append("- **가장 두드러진 이상 업종:** ").append(top.catName())
+              .append(" — Score ").append(top.score())
+              .append(", 상대격차 ").append(formatPercentPoint(top.relativeGap()))
+              .append("\n");
+        }
+        if (detail.growthMomentum() != null && !detail.growthMomentum().isEmpty()) {
+            sb.append("\n## 성장 모멘텀과 정책 검토 방향\n");
+            for (var momentum : detail.growthMomentum()) {
+                sb.append("\n### ").append(momentum.catName())
+                  .append(" · ").append(momentum.momentumType()).append("\n\n")
+                  .append("- **최근 지역 증감률:** ").append(formatPercent(momentum.growthRate())).append("\n")
+                  .append("- **대전 대비 상대격차:** ").append(formatPercentPoint(momentum.relativeGap())).append("\n");
+                if (momentum.reviewDirections() != null) {
+                    for (String direction : momentum.reviewDirections()) {
+                        sb.append("- **검토:** ").append(direction).append("\n");
+                    }
+                }
+            }
+        } else {
+            sb.append("\n## 성장 모멘텀\n\n")
+              .append("현재 기준에서 표시할 성장 모멘텀 업종이 없습니다.\n");
         }
         if (detail.excluded() != null && !detail.excluded().isEmpty()) {
-            sb.append("표본 부족으로 판정에서 제외된 대분류 업종은 ")
-              .append(detail.excluded().size())
-              .append("개(")
+            sb.append("\n## 판정 제외\n\n")
+              .append("- **표본 부족 업종 ").append(detail.excluded().size()).append("개:** ")
               .append(detail.excluded().stream()
                   .map(RegionDetailResponse.ExcludedCategory::catName)
                   .collect(java.util.stream.Collectors.joining(", ")))
-              .append(")입니다. 해당 조합은 기준 분기보다 두 분기 전 점포 수가 20개 미만이라 등급 산정에서 제외되었습니다. ");
+              .append("\n");
         }
-        sb.append("점포 수 감소가 반드시 폐업을 의미하는 것은 아닙니다.");
-        sb.append(" (AI 응답 생성 실패로 결정론적 요약을 제공했습니다.)");
+        sb.append("\n> 정책 검토 방향은 자동 결정이나 효과 예측이 아닙니다. 점포 수 변화만으로 성장 원인을 단정할 수 없어 현장 자료 확인이 필요하며, 점포 수 감소가 개별 점포의 폐업을 의미하지 않습니다.");
         return sb.toString();
     }
 
@@ -452,7 +462,6 @@ public class AiFallbackService {
         } else {
             sb.append("조건에 맞는 결과가 없습니다. ");
         }
-        sb.append("(AI 응답 생성 실패로 결정론적 요약을 제공했습니다.)");
         return sb.toString();
     }
 

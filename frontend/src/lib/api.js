@@ -56,6 +56,16 @@ export async function getBsi(periodMonth) {
   return response.data
 }
 
+export async function getSelectedCategoryScores(catCodes, period) {
+  const response = await apiClient.get('/anomaly/regions/selected-scores', {
+    params: {
+      catCodes: catCodes.join(','),
+      ...(period ? { period } : {}),
+    },
+  })
+  return response.data
+}
+
 export async function askAi(question) {
   const response = await apiClient.post('/ai/chat', { question })
   return response.data

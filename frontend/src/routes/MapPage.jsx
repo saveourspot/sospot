@@ -8,7 +8,7 @@ import Loading from '../components/Loading.jsx'
 import MapLegend from '../components/MapLegend.jsx'
 import RegionList from '../components/RegionList.jsx'
 import SigunguFilter from '../components/SigunguFilter.jsx'
-import { getAnomalyRegions, getRegionScores } from '../lib/api.js'
+import { getSelectedCategoryScores } from '../lib/api.js'
 import { GRADE_COLORS, NO_DATA_COLOR } from '../lib/gradeStyles.js'
 import { DAEJEON_SIGUNGU, MAJOR_CATEGORIES } from '../lib/mapFilters.js'
 import { formatPeriod } from '../lib/periodFormat.js'
@@ -53,9 +53,11 @@ function createTooltipContent(feature, item, isCategorySelected) {
 
   gradeLabel.textContent = '등급'
   gradeValue.textContent = item?.grade ?? '데이터 없음'
-  anomalyLabel.textContent = isCategorySelected ? '점포 수' : '이상 업종 수'
+  anomalyLabel.textContent = isCategorySelected ? '우선순위 반영 업종' : '이상 업종 수'
   anomalyValue.textContent = isCategorySelected
-    ? Number.isInteger(item?.storeCount) ? `${item.storeCount}개` : '판정 제외'
+    ? item?.validCategoryCount > 0
+      ? `${item.validCategoryCount}/${item.selectedCategoryCount}개`
+      : '표본 부족으로 판정 제외'
     : Number.isInteger(item?.anomalyCatCount) ? `${item.anomalyCatCount}개` : '데이터 없음'
 
   details.append(gradeLabel, gradeValue, anomalyLabel, anomalyValue)
@@ -67,7 +69,9 @@ function MapPage() {
   const navigate = useNavigate()
   const [geojson, setGeojson] = useState(null)
   const [regionScores, setRegionScores] = useState([])
-  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState(() =>
+    MAJOR_CATEGORIES.map((category) => category.code),
+  )
   const [selectedSigungu, setSelectedSigungu] = useState(DAEJEON_SIGUNGU)
   const [highlightedDongCode, setHighlightedDongCode] = useState(null)
   const [analysisPeriod, setAnalysisPeriod] = useState('')
@@ -118,16 +122,17 @@ function MapPage() {
     async function loadRegionScores() {
       setRegionScores([])
       setScoreError(null)
+
+      if (selectedCategories.length === 0) {
+        setAnalysisPeriod('')
+        setIsScoresLoading(false)
+        return
+      }
+
       setIsScoresLoading(true)
 
       try {
-        const result = selectedCategory
-          ? await getAnomalyRegions({
-              catCode: selectedCategory,
-              catLevel: 'MAJOR',
-              topN: EXPECTED_DONG_COUNT,
-            })
-          : await getRegionScores()
+        const result = await getSelectedCategoryScores(selectedCategories)
         const items = result?.data?.items
 
         if (!Array.isArray(items)) {
@@ -155,7 +160,7 @@ function MapPage() {
     return () => {
       ignore = true
     }
-  }, [selectedCategory, loadAttempt])
+  }, [selectedCategories, loadAttempt])
 
   const gradeByDongCode = useMemo(
     () => new Map(regionScores.map((item) => [item.dongCode, item])),
@@ -166,18 +171,21 @@ function MapPage() {
     (feature) => {
       const item = gradeByDongCode.get(feature.properties.dong_code)
       const isSelectedSigungu = selectedSigungu.includes(feature.properties.sggnm)
+      const hasSelectedCategory = selectedCategories.length > 0
       const hasUsableGrade =
         item?.sampleSizeFlag !== 'LOW' && Boolean(GRADE_COLORS[item?.grade])
 
       return {
-        color: '#ffffff',
+        color: hasSelectedCategory ? '#ffffff' : '#8fa2c1',
         weight: 1.1,
-        opacity: isSelectedSigungu ? 0.95 : 0.25,
-        fillColor: hasUsableGrade ? GRADE_COLORS[item.grade] : NO_DATA_COLOR,
-        fillOpacity: isSelectedSigungu ? 0.8 : 0.08,
+        opacity: hasSelectedCategory ? isSelectedSigungu ? 0.95 : 0.25 : 0.72,
+        fillColor: hasSelectedCategory
+          ? hasUsableGrade ? GRADE_COLORS[item.grade] : NO_DATA_COLOR
+          : '#dce5f3',
+        fillOpacity: hasSelectedCategory ? isSelectedSigungu ? 0.8 : 0.08 : 0.2,
       }
     },
-    [gradeByDongCode, selectedSigungu],
+    [gradeByDongCode, selectedCategories.length, selectedSigungu],
   )
 
   const onEachFeature = (feature, layer) => {
@@ -186,7 +194,7 @@ function MapPage() {
     layer.bindTooltip(createTooltipContent(
       feature,
       gradeByDongCode.get(dongCode),
-      Boolean(selectedCategory),
+      selectedCategories.length > 0,
     ), {
       className: 'region-map-tooltip',
       direction: 'top',
@@ -220,7 +228,7 @@ function MapPage() {
         createTooltipContent(
           layer.feature,
           gradeByDongCode.get(dongCode),
-          Boolean(selectedCategory),
+          selectedCategories.length > 0,
         ),
       )
 
@@ -240,11 +248,15 @@ function MapPage() {
         layer.bringToFront()
       }
     })
-  }, [getBoundaryStyle, gradeByDongCode, highlightedDongCode, selectedCategory])
+  }, [getBoundaryStyle, gradeByDongCode, highlightedDongCode, selectedCategories])
 
-  const selectedCategoryName =
-    MAJOR_CATEGORIES.find((category) => category.code === selectedCategory)?.name ??
-    '전체 업종'
+  const selectedCategoryName = selectedCategories.length === 0
+    ? '업종 미선택'
+    : selectedCategories.length === MAJOR_CATEGORIES.length
+      ? '전체 업종'
+    : MAJOR_CATEGORIES.filter((category) => selectedCategories.includes(category.code))
+        .map((category) => category.name)
+        .join(', ')
   const visibleRegions = regionScores.filter((region) =>
     selectedSigungu.includes(region.sigungu),
   )
@@ -265,7 +277,7 @@ function MapPage() {
       </div>
 
       <section className="map-filters" aria-label="지도 필터">
-        <CategoryFilter value={selectedCategory} onChange={setSelectedCategory} />
+        <CategoryFilter selected={selectedCategories} onChange={setSelectedCategories} />
         <SigunguFilter selected={selectedSigungu} onChange={setSelectedSigungu} />
         <p className="map-filters__status" aria-live="polite">
           {selectedCategoryName} · 자치구 {selectedSigungu.length}개 선택
@@ -290,11 +302,13 @@ function MapPage() {
           {geojson && !scoreError && (
             <>
               <div className="map-preview-badge">
-                {isScoresLoading
+                {selectedCategories.length === 0
+                  ? '업종을 선택해 주세요'
+                  : isScoresLoading
                   ? '분석 결과 불러오는 중'
                   : `${formatPeriod(analysisPeriod)} 분석 결과`}
               </div>
-              <MapLegend />
+              {selectedCategories.length > 0 && <MapLegend />}
               <MapContainer
                 className="daejeon-map"
                 center={DAEJEON_CENTER}
@@ -309,7 +323,7 @@ function MapPage() {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <GeoJSON
-                  key={`${selectedCategory}-${selectedSigungu.join('-')}`}
+                  key={`${selectedCategories.join('-')}-${selectedSigungu.join('-')}`}
                   data={geojson}
                   style={getBoundaryStyle}
                   onEachFeature={onEachFeature}
@@ -323,6 +337,11 @@ function MapPage() {
           regions={visibleRegions}
           highlightedDongCode={highlightedDongCode}
           onHighlight={setHighlightedDongCode}
+          emptyMessage={
+            selectedCategories.length === 0
+              ? '지도에 표시할 업종을 선택해 주세요.'
+              : undefined
+          }
         />
       </div>
     </main>

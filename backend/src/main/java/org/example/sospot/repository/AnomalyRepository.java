@@ -20,6 +20,9 @@ public interface AnomalyRepository extends JpaRepository<Anomaly, AnomalyId> {
   List<Anomaly> findByPeriodIdAndCatLevelAndCatCodeOrderByScoreDesc(
       String periodId, String catLevel, String catCode);
 
+  List<Anomaly> findByPeriodIdAndCatLevelAndCatCodeIn(
+      String periodId, String catLevel, Collection<String> catCodes);
+
   @Query("""
       select anomaly
       from Anomaly anomaly

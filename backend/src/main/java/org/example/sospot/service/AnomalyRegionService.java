@@ -1,5 +1,9 @@
 package org.example.sospot.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,9 +13,11 @@ import org.example.sospot.domain.Category;
 import org.example.sospot.domain.Dong;
 import org.example.sospot.dto.AnomalyRegionsResponse;
 import org.example.sospot.dto.ApiEnvelope;
+import org.example.sospot.dto.SelectedCategoryScoresResponse;
 import org.example.sospot.repository.AnomalyRepository;
 import org.example.sospot.repository.CategoryRepository;
 import org.example.sospot.repository.DongRepository;
+import org.example.sospot.repository.DongScoreRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -25,21 +31,25 @@ public class AnomalyRegionService {
   private static final Set<String> GRADES = Set.of("정상", "관심", "주의", "중점검토");
   private static final int DEFAULT_TOP_N = 100;
   private static final int MAX_TOP_N = 500;
+  private static final String MAJOR = "MAJOR";
 
   private final AnalysisPeriodService analysisPeriodService;
   private final AnomalyRepository anomalyRepository;
   private final DongRepository dongRepository;
   private final CategoryRepository categoryRepository;
+  private final DongScoreRepository dongScoreRepository;
 
   public AnomalyRegionService(
       AnalysisPeriodService analysisPeriodService,
       AnomalyRepository anomalyRepository,
       DongRepository dongRepository,
-      CategoryRepository categoryRepository) {
+      CategoryRepository categoryRepository,
+      DongScoreRepository dongScoreRepository) {
     this.analysisPeriodService = analysisPeriodService;
     this.anomalyRepository = anomalyRepository;
     this.dongRepository = dongRepository;
     this.categoryRepository = categoryRepository;
+    this.dongScoreRepository = dongScoreRepository;
   }
 
   public ApiEnvelope<AnomalyRegionsResponse> search(
@@ -116,6 +126,164 @@ public class AnomalyRegionService {
         analysisPeriodService.comparisonPeriods(period),
         new AnomalyRegionsResponse(items));
   }
+
+  public ApiEnvelope<SelectedCategoryScoresResponse> selectedScores(
+      String requestedPeriod, String requestedCatCodes) {
+    String period = analysisPeriodService.resolve(requestedPeriod);
+    Set<String> catCodes = parseMajorCategoryCodes(requestedCatCodes);
+    Set<String> allMajorCodes =
+        categoryRepository.findByCatLevelOrderByCatCodeAsc(MAJOR).stream()
+            .map(Category::getCatCode)
+            .collect(Collectors.toSet());
+    Map<String, Dong> dongByCode =
+        dongRepository.findAll().stream()
+            .collect(Collectors.toMap(Dong::getDongCode, Function.identity()));
+
+    if (catCodes.equals(allMajorCodes)) {
+      List<SelectedCategoryScoresResponse.Item> items =
+          dongScoreRepository.findByPeriodIdOrderByPctScoreDesc(period).stream()
+              .map(
+                  score -> {
+                    Dong dong = dongByCode.get(score.getDongCode());
+                    return new SelectedCategoryScoresResponse.Item(
+                        score.getDongCode(),
+                        dong.getDongName(),
+                        dong.getSigungu(),
+                        catCodes.size(),
+                        score.getValidCatCount(),
+                        score.getAnomalyCatCount(),
+                        score.getValidCatCount() == 0 ? "LOW" : "OK",
+                        score.getRawScore(),
+                        score.getPctScore(),
+                        score.getGrade());
+                  })
+              .toList();
+      return selectedScoresEnvelope(period, items);
+    }
+
+    Map<String, List<org.example.sospot.domain.Anomaly>> anomaliesByDong =
+        anomalyRepository.findByPeriodIdAndCatLevelAndCatCodeIn(period, MAJOR, catCodes).stream()
+            .collect(Collectors.groupingBy(org.example.sospot.domain.Anomaly::getDongCode));
+
+    List<SelectedDongRawScore> rawScores =
+        dongByCode.values().stream()
+            .map(
+                dong -> {
+                  List<BigDecimal> validScores =
+                      anomaliesByDong.getOrDefault(dong.getDongCode(), List.of()).stream()
+                          .filter(anomaly -> !"LOW".equals(anomaly.getSampleSizeFlag()))
+                          .map(org.example.sospot.domain.Anomaly::getScore)
+                          .filter(java.util.Objects::nonNull)
+                          .toList();
+                  int anomalyCategoryCount =
+                      (int)
+                          validScores.stream()
+                              .filter(score -> score.compareTo(BigDecimal.valueOf(50)) >= 0)
+                              .count();
+                  BigDecimal topAverage =
+                      average(
+                          validScores.stream()
+                              .sorted(Comparator.reverseOrder())
+                              .limit(3)
+                              .toList());
+                  BigDecimal weight =
+                      BigDecimal.valueOf(Math.min(1.0, 0.6 + 0.1 * anomalyCategoryCount));
+                  BigDecimal rawScore = topAverage == null ? null : topAverage.multiply(weight);
+                  return new SelectedDongRawScore(
+                      dong, validScores.size(), anomalyCategoryCount, rawScore);
+                })
+            .toList();
+
+    List<SelectedDongRawScore> ranked =
+        rawScores.stream().filter(item -> item.rawScore() != null).toList();
+    List<SelectedCategoryScoresResponse.Item> items =
+        rawScores.stream()
+            .map(item -> selectedScoreItem(item, catCodes.size(), ranked))
+            .sorted(
+                Comparator.comparing(
+                        SelectedCategoryScoresResponse.Item::score,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(SelectedCategoryScoresResponse.Item::dongCode))
+            .toList();
+
+    return selectedScoresEnvelope(period, items);
+  }
+
+  private SelectedCategoryScoresResponse.Item selectedScoreItem(
+      SelectedDongRawScore item, int selectedCategoryCount, List<SelectedDongRawScore> ranked) {
+    BigDecimal percentile = percentile(item.rawScore(), ranked);
+    Dong dong = item.dong();
+    return new SelectedCategoryScoresResponse.Item(
+        dong.getDongCode(),
+        dong.getDongName(),
+        dong.getSigungu(),
+        selectedCategoryCount,
+        item.validCategoryCount(),
+        item.anomalyCategoryCount(),
+        item.rawScore() == null ? "LOW" : "OK",
+        rounded(item.rawScore()),
+        percentile,
+        gradeForPercentile(percentile));
+  }
+
+  private BigDecimal percentile(BigDecimal rawScore, List<SelectedDongRawScore> ranked) {
+    if (rawScore == null || ranked.isEmpty()) return null;
+    long lower = ranked.stream().filter(item -> item.rawScore().compareTo(rawScore) < 0).count();
+    long equal = ranked.stream().filter(item -> item.rawScore().compareTo(rawScore) == 0).count();
+    BigDecimal averageRank = BigDecimal.valueOf(lower * 2 + equal + 1).divide(BigDecimal.valueOf(2));
+    return averageRank
+        .multiply(BigDecimal.valueOf(100))
+        .divide(BigDecimal.valueOf(ranked.size()), 3, RoundingMode.HALF_UP);
+  }
+
+  private ApiEnvelope<SelectedCategoryScoresResponse> selectedScoresEnvelope(
+      String period, List<SelectedCategoryScoresResponse.Item> items) {
+    return new ApiEnvelope<>(
+        period,
+        analysisPeriodService.comparisonPeriods(period),
+        new SelectedCategoryScoresResponse(items));
+  }
+
+  private Set<String> parseMajorCategoryCodes(String requestedCatCodes) {
+    if (requestedCatCodes == null || requestedCatCodes.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "catCodes를 하나 이상 지정해야 합니다.");
+    }
+    Set<String> catCodes =
+        java.util.Arrays.stream(requestedCatCodes.split(","))
+            .map(String::trim)
+            .filter(code -> !code.isEmpty())
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    Set<String> supportedCodes =
+        categoryRepository.findByCatLevelOrderByCatCodeAsc(MAJOR).stream()
+            .map(Category::getCatCode)
+            .collect(Collectors.toSet());
+    if (catCodes.isEmpty() || !supportedCodes.containsAll(catCodes)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 대분류 업종 코드가 포함되어 있습니다.");
+    }
+    return catCodes;
+  }
+
+  private BigDecimal average(List<BigDecimal> scores) {
+    if (scores.isEmpty()) return null;
+    return scores.stream()
+        .reduce(BigDecimal.ZERO, BigDecimal::add)
+        .divide(BigDecimal.valueOf(scores.size()), 3, RoundingMode.HALF_UP);
+  }
+
+  private BigDecimal rounded(BigDecimal value) {
+    return value == null ? null : value.setScale(3, RoundingMode.HALF_UP);
+  }
+
+  private String gradeForPercentile(BigDecimal score) {
+    if (score == null) return null;
+    if (score.compareTo(BigDecimal.valueOf(90)) >= 0) return "중점검토";
+    if (score.compareTo(BigDecimal.valueOf(70)) >= 0) return "주의";
+    if (score.compareTo(BigDecimal.valueOf(40)) >= 0) return "관심";
+    return "정상";
+  }
+
+  private record SelectedDongRawScore(
+      Dong dong, int validCategoryCount, int anomalyCategoryCount, BigDecimal rawScore) {}
 
   private String normalizeCatLevel(String catLevel) {
     String normalized =

@@ -84,19 +84,21 @@ function TrendChart({ series = [], bsiPeriodLabel }) {
             type="monotone"
             dataKey="regionIndex"
             name="해당 지역 (첫 분기=100)"
-            stroke="#6f91d8"
-            strokeWidth={3}
-            dot={{ r: 4 }}
+            stroke="#0072b2"
+            strokeWidth={3.5}
+            dot={{ r: 4.5, fill: '#ffffff', stroke: '#0072b2', strokeWidth: 3 }}
+            activeDot={{ r: 6, fill: '#0072b2' }}
           />
           <Line
             yAxisId="change"
             type="monotone"
             dataKey="cityIndex"
             name="대전 전체 동일 업종 (첫 분기=100)"
-            stroke="#9a86d5"
-            strokeWidth={2.5}
-            strokeDasharray="6 4"
-            dot={{ r: 3 }}
+            stroke="#d55e00"
+            strokeWidth={3}
+            strokeDasharray="9 6"
+            dot={false}
+            activeDot={{ r: 6, fill: '#d55e00' }}
           />
         </ComposedChart>
       </ResponsiveContainer>
