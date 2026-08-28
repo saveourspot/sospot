@@ -405,3 +405,5 @@ pipeline/__pycache__/
 backend/src/main/resources/application-local.yml
 
 backend/.gradle/
+# Gradle Wrapper는 서버와 CI에서 Gradle을 재현 가능하게 실행하는 데 필요하다.
+!backend/gradle/wrapper/gradle-wrapper.jar
