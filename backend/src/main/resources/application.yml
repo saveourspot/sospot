@@ -2,7 +2,7 @@ spring:
   application:
     name: sospot
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE:local}
   jpa:
     hibernate:
       ddl-auto: validate
