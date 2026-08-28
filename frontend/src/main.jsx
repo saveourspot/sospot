@@ -5,9 +5,11 @@ import './index.css'
 import App from './App.jsx'
 import 'leaflet/dist/leaflet.css'
 
+const routerBaseName = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={routerBaseName}>
       <App />
     </BrowserRouter>
   </StrictMode>,
