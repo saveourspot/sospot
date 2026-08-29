@@ -9,13 +9,24 @@ const RECOMMENDED_QUESTIONS = [
 ]
 
 function renderInlineMarkdown(text) {
-  return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, index) => {
+  return text.split(/(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/g).map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>
+    }
+
+    if (part.startsWith('__') && part.endsWith('__')) {
       return <strong key={index}>{part.slice(2, -2)}</strong>
     }
 
     if (part.startsWith('`') && part.endsWith('`')) {
       return <code key={index}>{part.slice(1, -1)}</code>
+    }
+
+    if (
+      (part.startsWith('*') && part.endsWith('*')) ||
+      (part.startsWith('_') && part.endsWith('_'))
+    ) {
+      return <em key={index}>{part.slice(1, -1)}</em>
     }
 
     return <Fragment key={index}>{part}</Fragment>
@@ -42,7 +53,7 @@ function MarkdownAnswer({ children }) {
       continue
     }
 
-    const heading = line.match(/^(#{1,3})\s+(.+)$/)
+    const heading = line.match(/^(#{1,6})\s*(.+?)\s*#*$/)
     if (heading) {
       const Heading = `h${Math.min(heading[1].length + 2, 5)}`
       blocks.push(
@@ -71,11 +82,11 @@ function MarkdownAnswer({ children }) {
       continue
     }
 
-    const listItem = line.match(/^(\d+\.|-)\s+(.+)$/)
+    const listItem = line.match(/^(\d+[.)]|[-*+])\s+(.+)$/)
     if (listItem) {
-      const ordered = listItem[1] !== '-'
+      const ordered = /^\d/.test(listItem[1])
       const items = []
-      const pattern = ordered ? /^\d+\.\s+(.+)$/ : /^-\s+(.+)$/
+      const pattern = ordered ? /^\d+[.)]\s+(.+)$/ : /^[-*+]\s+(.+)$/
 
       while (index < lines.length) {
         const match = lines[index].trim().match(pattern)
@@ -103,7 +114,7 @@ function MarkdownAnswer({ children }) {
     index += 1
     while (index < lines.length && lines[index].trim()) {
       const nextLine = lines[index].trim()
-      if (/^(#{1,3})\s+|^-{3,}$|^>|^(\d+\.|-)\s+/.test(nextLine)) break
+      if (/^#{1,6}\s*\S|^-{3,}$|^>|^(\d+[.)]|[-*+])\s+/.test(nextLine)) break
       paragraph.push(nextLine)
       index += 1
     }
