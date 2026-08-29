@@ -14,7 +14,9 @@ function Sparkline({ points }) {
   const range = max - min || 1
   const coordinates = counts
     .map((count, index) => {
-      const x = counts.length === 1 ? 50 : (index / (counts.length - 1)) * 100
+      const x = counts.length === 1
+        ? 50
+        : 100 / 6 + (index / (counts.length - 1)) * (200 / 3)
       const y = 34 - ((count - min) / range) * 28
       return `${x},${y}`
     })
@@ -22,7 +24,12 @@ function Sparkline({ points }) {
 
   return (
     <div className="anomaly-sparkline" aria-label="3분기 점포 수 추이">
-      <svg viewBox="0 0 100 40" role="img" aria-hidden="true">
+      <svg
+        viewBox="0 0 100 40"
+        preserveAspectRatio="none"
+        role="img"
+        aria-hidden="true"
+      >
         <polyline points={coordinates} />
       </svg>
       <div>

@@ -172,7 +172,7 @@ function RegionDetailPage() {
         </span>
       </section>
 
-      <section className="positive-changes" aria-labelledby="positive-changes-heading">
+      <section className="positive-changes detail-section detail-section--support" aria-labelledby="positive-changes-heading">
         <div className="section-heading">
           <div>
             <p className="eyebrow">함께 확인할 변화</p>
@@ -217,13 +217,13 @@ function RegionDetailPage() {
         ) : (
           <Empty message="현재 기준에서 표시할 성장 모멘텀 업종이 없습니다." />
         )}
-        <p className="positive-changes__notice">
+        <p className="positive-changes__notice detail-notice">
           점포 수 변화만으로 성장 원인이나 정책 효과를 단정할 수 없어 현장 자료
           확인이 필요합니다.
         </p>
       </section>
 
-      <section className="relative-gap-section" aria-labelledby="relative-gap-heading">
+      <section className="relative-gap-section detail-section detail-section--core" aria-labelledby="relative-gap-heading">
         <div className="section-heading">
           <div>
             <p className="eyebrow">대전 전체 대비</p>
@@ -239,7 +239,7 @@ function RegionDetailPage() {
         <RelativeGapChart categories={validRelativeGaps} />
       </section>
 
-      <section className="top-anomalies" aria-labelledby="top-anomalies-heading">
+      <section className="top-anomalies detail-section detail-section--core" aria-labelledby="top-anomalies-heading">
         <div className="section-heading">
           <div>
             <p className="eyebrow">업종별 판정 근거</p>
@@ -266,7 +266,7 @@ function RegionDetailPage() {
         )}
       </section>
 
-      <section className="trend-section" aria-labelledby="trend-heading">
+      <section className="trend-section detail-section detail-section--core" aria-labelledby="trend-heading">
         <div className="section-heading">
           <div>
             <p className="eyebrow">최근 변화 비교</p>
@@ -284,13 +284,13 @@ function RegionDetailPage() {
           series={trendSeries}
           bsiPeriodLabel={formatPeriod(bsi?.periodMonth)}
         />
-        <p className="trend-section__notice">
+        <p className="trend-section__notice detail-notice">
           BSI는 이상징후 점수와 등급 계산에 사용되지 않으며, 지역×업종 교차
           BSI를 의미하지 않습니다.
         </p>
       </section>
 
-      <section className="commercial-benchmarks" aria-labelledby="commercial-benchmarks-heading">
+      <section className="commercial-benchmarks detail-section detail-section--support" aria-labelledby="commercial-benchmarks-heading">
         <div className="section-heading">
           <div>
             <p className="eyebrow">유사 상권 벤치마킹</p>
@@ -359,14 +359,14 @@ function RegionDetailPage() {
         ) : (
           <Empty message="현재 기준에서 비교 가능한 유사 상권 우위 지역이 없습니다." />
         )}
-        <p className="commercial-benchmarks__notice">
+        <p className="commercial-benchmarks__notice detail-notice">
           유사도는 최신 분기의 대분류 업종별 점포 구성으로 계산합니다. 상대격차가
           높다는 사실만으로 성장 원인이나 정책 효과를 단정할 수 없으며, 우위 지역의
           사례를 그대로 복제하지 말고 입지·고객층·주변 업종 차이를 먼저 확인해야 합니다.
         </p>
       </section>
 
-      <section className="excluded-categories" aria-labelledby="excluded-heading">
+      <section className="excluded-categories detail-section detail-section--reference" aria-labelledby="excluded-heading">
         <div className="section-heading">
           <div>
             <p className="eyebrow">판정 제외</p>
