@@ -407,3 +407,9 @@ backend/src/main/resources/application-local.yml
 backend/.gradle/
 # Gradle Wrapper는 서버와 CI에서 Gradle을 재현 가능하게 실행하는 데 필요하다.
 !backend/gradle/wrapper/gradle-wrapper.jar
+
+# Local Codex work files and generated Word documents
+.codex/
+docs/SOSpot_lab_server_deployment_blog*.docx
+docs/SOSpot_progress_source.docx
+docs/SOSpot_개발진행_및_발표정리_업데이트.docx
