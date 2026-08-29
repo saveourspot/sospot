@@ -63,6 +63,7 @@ function RegionList({ regions, highlightedDongCode, onHighlight, emptyMessage })
                   <span className="region-list__name">{region.dongName}</span>
                   <span className="region-list__sigungu">{region.sigungu}</span>
                   <GradeBadge grade={region.grade} />
+                  <span className="region-list__arrow" aria-hidden="true">→</span>
                 </Link>
               </li>
             )

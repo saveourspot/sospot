@@ -91,29 +91,48 @@ function HomePage() {
             <span>예측이 아닌 최근 데이터 기반 상대 비교 분석입니다.</span>
           </div>
           <div className="home-hero__meta" aria-label="서비스 분석 범위">
-            <span><strong>82</strong>개 행정동</span>
-            <span><strong>10</strong>개 대분류 업종</span>
-            <span><strong>3</strong>개 분기 비교</span>
+            <div className="home-hero__meta-item">
+              <strong>82</strong>
+              <span>개 행정동</span>
+            </div>
+            <div className="home-hero__meta-item">
+              <strong>10</strong>
+              <span>개 대분류 업종</span>
+            </div>
+            <div className="home-hero__meta-item">
+              <strong>3</strong>
+              <span>개 분기 비교</span>
+            </div>
           </div>
         </div>
         <div className="home-hero__visual" aria-hidden="true">
-          <div className="home-hero__visual-header">
-            <span>대전 상권 시그널</span>
-            <i>MONITOR</i>
-          </div>
-          <div className="home-hero__signal">
-            <span className="home-hero__signal-ring home-hero__signal-ring--outer" />
-            <span className="home-hero__signal-ring home-hero__signal-ring--inner" />
-            <span className="home-hero__signal-sweep" />
-            <span className="home-hero__signal-dot home-hero__signal-dot--one" />
-            <span className="home-hero__signal-dot home-hero__signal-dot--two" />
-            <span className="home-hero__signal-dot home-hero__signal-dot--three" />
-            <strong>82</strong>
-            <small>행정동 분석</small>
-          </div>
-          <div className="home-hero__visual-footer">
-            <span><i className="status-dot" /> 최신 분석 반영</span>
-            <span>상대 비교 기반</span>
+          <div className="home-hero__radar-scene">
+            <div className="home-hero__hud-heading">
+              <span>대전 상권 시그널</span>
+              <i>MONITOR</i>
+            </div>
+            <span className="home-hero__radar-shadow" />
+            <div className="home-hero__radar-float">
+              <span className="home-hero__radar-depth" />
+              <div className="home-hero__radar-disc">
+                <span className="home-hero__radar-sweep" />
+                <span className="home-hero__radar-crosshair" />
+                <span className="home-hero__radar-blip home-hero__radar-blip--one" />
+                <span className="home-hero__radar-blip home-hero__radar-blip--two" />
+                <span className="home-hero__radar-blip home-hero__radar-blip--three" />
+                <div className="home-hero__radar-center">
+                  <strong>82</strong>
+                  <span>행정동 분석</span>
+                </div>
+              </div>
+              <span className="home-hero__radar-arc home-hero__radar-arc--one" />
+              <span className="home-hero__radar-arc home-hero__radar-arc--two" />
+              <span className="home-hero__radar-arc home-hero__radar-arc--three" />
+            </div>
+            <div className="home-hero__hud-status">
+              <span><i className="status-dot" />최신 분석 반영</span>
+              <span>상대 비교 기반</span>
+            </div>
           </div>
         </div>
       </section>

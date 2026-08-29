@@ -277,11 +277,17 @@ function MapPage() {
       </div>
 
       <section className="map-filters" aria-label="지도 필터">
+        <div className="map-filters__heading">
+          <div>
+            <span>ANALYSIS FILTER</span>
+            <h2>분석 조건</h2>
+          </div>
+          <p className="map-filters__status" aria-live="polite">
+            {selectedCategoryName} · 자치구 {selectedSigungu.length}개 선택
+          </p>
+        </div>
         <CategoryFilter selected={selectedCategories} onChange={setSelectedCategories} />
         <SigunguFilter selected={selectedSigungu} onChange={setSelectedSigungu} />
-        <p className="map-filters__status" aria-live="polite">
-          {selectedCategoryName} · 자치구 {selectedSigungu.length}개 선택
-        </p>
       </section>
 
       <div className="map-workspace">
