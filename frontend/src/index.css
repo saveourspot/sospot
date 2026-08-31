@@ -4671,9 +4671,8 @@ body {
 }
 
 .region-detail-page .excluded-categories__list {
-  border: 1px solid #dfe6e2;
-  border-radius: 14px;
-  background: #fafcfb;
+  border: 0;
+  background: transparent;
 }
 
 @media (max-width: 760px) {

@@ -160,16 +160,16 @@ function RegionDetailPage() {
   const summaryBody = isNormalGrade ? (
     <p>
       <strong>{header.dongName}</strong>은 대전 {header.totalDongCount}개 행정동 중
-      {' '}<strong>{header.rank}위</strong>로, 현재 뚜렷한 이상징후가 관측되지
-      않았습니다. 대전 전체 흐름과 유사하거나 더 양호한 방향으로 움직이고
-      있습니다.
+      {' '}검토 우선순위 <strong>{header.rank}위</strong>이며, 행정동 종합 등급은
+      정상입니다. 이는 절대적으로 이상징후가 없다는 의미가 아니므로 업종별
+      분석 결과는 별도로 확인할 필요가 있습니다.
     </p>
   ) : isWatchGrade ? (
     <p>
       <strong>{header.dongName}</strong>은 대전 {header.totalDongCount}개 행정동 중
       {' '}<strong>{header.rank}위</strong>이며, 이상징후 업종은
-      {' '}<strong>{header.anomalyCatCount}개</strong>로 확인됩니다. 우선 검토
-      대상은 아니지만 흐름을 지켜볼 만합니다.
+      {' '}<strong>{header.anomalyCatCount}개</strong>로 확인됩니다. 대전 내 상대적
+      검토 우선순위에서 지속적으로 흐름을 살펴볼 후보입니다.
       {strongestAnomaly && (
         <> 가장 눈여겨볼 업종은 <strong>{strongestAnomaly.catName}</strong>으로,
           대전 전체 동일 업종 대비 상대격차는
