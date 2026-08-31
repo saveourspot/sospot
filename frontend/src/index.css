@@ -2366,6 +2366,7 @@ body {
 
 .excluded-categories__list strong {
   color: #34435f;
+  white-space: nowrap;
 }
 
 .excluded-categories__list span {

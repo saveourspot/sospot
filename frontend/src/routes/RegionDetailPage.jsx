@@ -410,15 +410,15 @@ function RegionDetailPage() {
           <p className="period-label">{excluded.length}개 업종</p>
         </div>
         <p className="section-description">
-          기준 분기보다 두 분기 전 점포 수가 20개 미만인 업종은 이상징후
-          점수와 등급을 계산하지 않습니다.
+          비교 시작 분기({formatPeriod(comparisonPeriods[0])})의 점포 수가 20개
+          미만인 업종은 이상징후 점수와 등급을 계산하지 않습니다.
         </p>
         {excluded.length > 0 ? (
           <ul className="excluded-categories__list">
             {excluded.map((category) => (
               <li key={category.catCode}>
                 <strong>{category.catName}</strong>
-                <span>{category.reason}</span>
+                <span>{category.storeCount}개</span>
               </li>
             ))}
           </ul>
