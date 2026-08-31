@@ -75,9 +75,7 @@ jobs:
     needs:
       - test-backend
       - test-frontend
-    runs-on:
-      - self-hosted
-      - linux
+    runs-on: self-hosted
 
     steps:
       - name: Update repository
