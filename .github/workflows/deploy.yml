@@ -1,113 +1,113 @@
 name: SOSpot CI/CD
 
-  on:
-    push:
-      branches:
-        - main
-    workflow_dispatch:
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-  permissions:
-    contents: read
+permissions:
+  contents: read
 
-  concurrency:
-    group: sospot-production
-    cancel-in-progress: false
+concurrency:
+  group: sospot-production
+  cancel-in-progress: false
 
-  jobs:
-    test-backend:
-      name: Backend test
-      runs-on: ubuntu-latest
+jobs:
+  test-backend:
+    name: Backend test
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        - name: Set up Java 17
-          uses: actions/setup-java@v4
-          with:
-            distribution: temurin
-            java-version: "17"
-            cache: gradle
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
 
-        - name: Test backend
-          working-directory: backend
-          run: |
-            chmod +x gradlew
-            ./gradlew test --no-daemon
+      - name: Test backend
+        working-directory: backend
+        run: |
+          chmod +x gradlew
+          ./gradlew test --no-daemon
 
-    test-frontend:
-      name: Frontend build and lint
-      runs-on: ubuntu-latest
+  test-frontend:
+    name: Frontend build and lint
+    runs-on: ubuntu-latest
 
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        - name: Set up Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: "22"
-            cache: npm
-            cache-dependency-path: frontend/package-lock.json
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
-        - name: Install dependencies
-          working-directory: frontend
-          run: npm ci
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
 
-        - name: Build frontend
-          working-directory: frontend
-          run: npm run build
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
 
-        - name: Lint frontend
-          working-directory: frontend
-          run: npm run lint
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
 
-    deploy:
-      name: Deploy to Daisy
-      needs:
-        - test-backend
-        - test-frontend
-      runs-on:
-        - self-hosted
-        - linux
-        - ARM64
-        - sospot-prod
+  deploy:
+    name: Deploy to Daisy
+    needs:
+      - test-backend
+      - test-frontend
+    runs-on:
+      - self-hosted
+      - linux
+      - ARM64
+      - sospot-prod
 
-      steps:
-        - name: Update repository
-          working-directory: /home/jaemin/apps/sospot
-          run: |
-            git fetch origin main
-            git pull --ff-only origin main
+    steps:
+      - name: Update repository
+        working-directory: /home/jaemin/apps/sospot
+        run: |
+          git fetch origin main
+          git pull --ff-only origin main
 
-        - name: Build and restart containers
-          working-directory: /home/jaemin/apps/sospot
-          run: |
-            docker compose \
-              --env-file .env \
-              -f docker-compose.prod.yml \
-              up -d --build
+      - name: Build and restart containers
+        working-directory: /home/jaemin/apps/sospot
+        run: |
+          docker compose \
+            --env-file .env \
+            -f docker-compose.prod.yml \
+            up -d --build
 
-        - name: Show container status
-          working-directory: /home/jaemin/apps/sospot
-          run: |
-            docker compose \
-              --env-file .env \
-              -f docker-compose.prod.yml \
-              ps
+      - name: Show container status
+        working-directory: /home/jaemin/apps/sospot
+        run: |
+          docker compose \
+            --env-file .env \
+            -f docker-compose.prod.yml \
+            ps
 
-        - name: Verify deployment
-          run: |
-            for attempt in $(seq 1 12); do
-              if curl --fail --silent --show-error \
-                http://127.0.0.1:12020/ > /dev/null; then
-                echo "SOSpot deployment succeeded."
-                exit 0
-              fi
+      - name: Verify deployment
+        run: |
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:12020/ > /dev/null; then
+              echo "SOSpot deployment succeeded."
+              exit 0
+            fi
 
-              echo "Waiting for SOSpot... ($attempt/12)"
-              sleep 5
-            done
+            echo "Waiting for SOSpot... ($attempt/12)"
+            sleep 5
+          done
 
-            echo "SOSpot deployment health check failed."
-            exit 1
+          echo "SOSpot deployment health check failed."
+          exit 1
