@@ -4373,15 +4373,15 @@ body {
 }
 
 .map-page .map-preview-badge {
-  top: 14px;
-  bottom: auto;
-  left: 50%;
+  top: auto;
+  bottom: 28px;
+  left: 14px;
   border-color: rgb(59 94 79 / 14%);
   color: #345648;
   background: rgb(255 255 255 / 93%);
   box-shadow: 0 8px 24px rgb(30 56 45 / 13%);
   backdrop-filter: blur(9px);
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .map-page .map-legend {
@@ -4465,8 +4465,10 @@ body {
   }
 
   .map-page .map-preview-badge {
-    top: 12px;
-    max-width: calc(100% - 110px);
+    top: auto;
+    bottom: 22px;
+    left: 10px;
+    max-width: calc(100% - 210px);
     overflow: hidden;
     text-overflow: ellipsis;
   }
