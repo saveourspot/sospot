@@ -101,10 +101,20 @@ jobs:
             ps
 
       - name: Verify deployment
+        working-directory: /home/jaemin/apps/sospot
         run: |
+          health_host=$(sed -n 's/^APP_BIND_ADDRESS=//p' .env | tail -n 1)
+          health_port=$(sed -n 's/^APP_PORT=//p' .env | tail -n 1)
+          : "${health_host:=127.0.0.1}"
+          : "${health_port:=12020}"
+
+          if [ "$health_host" = "0.0.0.0" ]; then
+            health_host=127.0.0.1
+          fi
+
           for attempt in $(seq 1 12); do
             if curl --fail --silent --show-error \
-              http://127.0.0.1:12020/ > /dev/null; then
+              "http://${health_host}:${health_port}/" > /dev/null; then
               echo "SOSpot deployment succeeded."
               exit 0
             fi
