@@ -145,6 +145,50 @@ function RegionDetailPage() {
   }))
   const strongestAnomaly = topAnomalies[0]
 
+  const isPriorityGrade = header.grade === '중점검토' || header.grade === '주의'
+  const isWatchGrade = header.grade === '관심'
+  const isNormalGrade = header.grade === '정상'
+
+  const summaryHeading = isPriorityGrade
+    ? '왜 먼저 살펴봐야 하나요?'
+    : isWatchGrade
+      ? '어떤 신호를 보고 있나요?'
+      : isNormalGrade
+        ? '현재 어떤 상태인가요?'
+        : '판정 결과 요약'
+
+  const summaryBody = isNormalGrade ? (
+    <p>
+      <strong>{header.dongName}</strong>은 대전 {header.totalDongCount}개 행정동 중
+      {' '}<strong>{header.rank}위</strong>로, 현재 뚜렷한 이상징후가 관측되지
+      않았습니다. 대전 전체 흐름과 유사하거나 더 양호한 방향으로 움직이고
+      있습니다.
+    </p>
+  ) : isWatchGrade ? (
+    <p>
+      <strong>{header.dongName}</strong>은 대전 {header.totalDongCount}개 행정동 중
+      {' '}<strong>{header.rank}위</strong>이며, 이상징후 업종은
+      {' '}<strong>{header.anomalyCatCount}개</strong>로 확인됩니다. 우선 검토
+      대상은 아니지만 흐름을 지켜볼 만합니다.
+      {strongestAnomaly && (
+        <> 가장 눈여겨볼 업종은 <strong>{strongestAnomaly.catName}</strong>으로,
+          대전 전체 동일 업종 대비 상대격차는
+          {' '}<strong>{formatPercentPoint(strongestAnomaly.relativeGap)}</strong>입니다.</>
+      )}
+    </p>
+  ) : (
+    <p>
+      <strong>{header.dongName}</strong>은 대전 {header.totalDongCount}개 행정동 중
+      {' '}<strong>{header.rank}위</strong>이며, 이상징후 업종은
+      {' '}<strong>{header.anomalyCatCount}개</strong>입니다.
+      {strongestAnomaly && (
+        <> 가장 높은 업종은 <strong>{strongestAnomaly.catName}</strong>으로,
+          대전 전체 동일 업종 대비 상대격차는
+          {' '}<strong>{formatPercentPoint(strongestAnomaly.relativeGap)}</strong>입니다.</>
+      )}
+    </p>
+  )
+
   return (
     <main className="page-container region-detail-page">
       <RegionHeader
@@ -155,18 +199,9 @@ function RegionDetailPage() {
       <section className="reason-summary" aria-labelledby="reason-summary-heading">
         <div>
           <p className="eyebrow">판정 근거</p>
-          <h2 id="reason-summary-heading">왜 먼저 살펴봐야 하나요?</h2>
+          <h2 id="reason-summary-heading">{summaryHeading}</h2>
         </div>
-        <p>
-          <strong>{header.dongName}</strong>은 대전 {header.totalDongCount}개 행정동 중
-          {' '}<strong>{header.rank}위</strong>이며, 이상징후 업종은
-          {' '}<strong>{header.anomalyCatCount}개</strong>입니다.
-          {strongestAnomaly && (
-            <> 가장 높은 업종은 <strong>{strongestAnomaly.catName}</strong>으로,
-              대전 전체 동일 업종 대비 상대격차는
-              {' '}<strong>{formatPercentPoint(strongestAnomaly.relativeGap)}</strong>입니다.</>
-          )}
-        </p>
+        {summaryBody}
         <span>
           이 지표는 미래를 예측하거나 정책지원 대상을 자동 결정하지 않습니다.
         </span>
