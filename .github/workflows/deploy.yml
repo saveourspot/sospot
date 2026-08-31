@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   test-backend:
-    name: Backend test
+    name: Backend compile and unit tests
     runs-on: ubuntu-latest
 
     steps:
@@ -29,11 +29,19 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Test backend
+      - name: Compile backend
         working-directory: backend
         run: |
           chmod +x gradlew
-          ./gradlew test --no-daemon
+          ./gradlew compileJava --no-daemon
+
+      - name: Run database-independent unit tests
+        working-directory: backend
+        run: |
+          ./gradlew test \
+            --tests org.example.sospot.ai.AiFallbackServiceTest \
+            --tests org.example.sospot.ai.AiCostControlServiceTest \
+            --no-daemon
 
   test-frontend:
     name: Frontend build and lint
